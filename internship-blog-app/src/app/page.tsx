@@ -1,8 +1,8 @@
 export default function Home() {
   return (
-    <main style={{ padding: 24 }}>
+    <main>
       <h1>Internship Blog App</h1>
-      <p>Project foundation is ready.</p>
+      <p>Architecture baseline is in place.</p>
     </main>
   );
 }
