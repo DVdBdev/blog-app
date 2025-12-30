@@ -1,4 +1,7 @@
 import { getCurrentUser } from "@/features/auth/auth.server";
+import { Navbar } from "@/components/navigation/Navbar";
+
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,
@@ -10,9 +13,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <header>
-          {user ? `Logged in as ${user.email}` : "Not logged in"}
-        </header>
+        <Navbar user={user} />
         {children}
       </body>
     </html>
