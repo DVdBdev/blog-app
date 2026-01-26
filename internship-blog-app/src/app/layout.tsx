@@ -1,16 +1,20 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { getCurrentUser } from "@/features/auth/auth.server";
 import { Navbar } from "@/components/navigation/Navbar";
 
-export default function RootLayout({
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentUser();
+
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        <AppShell>{children}</AppShell>
+        <Navbar user={user} />
+        {children}
       </body>
     </html>
   );
