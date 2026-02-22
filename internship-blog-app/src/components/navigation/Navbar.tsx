@@ -12,7 +12,13 @@ export function Navbar({ user }: { user: { email?: string } | null }) {
       <div className="flex items-center gap-4">
         {user ? (
           <>
-            <span className="text-sm text-muted-foreground">{user.email}</span>
+            <Link href="/journeys" className="text-sm font-medium hover:text-primary">
+              My Journeys
+            </Link>
+            <Link href="/me" className="text-sm font-medium hover:text-primary">
+              My Profile
+            </Link>
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">{user.email}</span>
             <LogoutButton />
           </>
         ) : (
