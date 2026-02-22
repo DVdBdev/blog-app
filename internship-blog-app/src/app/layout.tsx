@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/features/auth/auth.server";
 import { Navbar } from "@/components/navigation/Navbar";
+import "./globals.css";
 
 export const dynamic = "force-dynamic";
 

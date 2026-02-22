@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Profiles
+
+When a user registers, a profile is automatically created in the `public.profiles` table. This is handled by the `registerUser` server action in `src/features/auth/auth.actions.ts`.
+
+The `profiles` table contains the following columns:
+- `id` (uuid, primary key, references `auth.users(id)` on delete cascade)
+- `email` (text, unique, not null)
+- `username` (text, unique, not null)
+- `display_name` (text, nullable)
+- `avatar_url` (text, nullable)
+- `bio` (text, nullable)
+- `created_at` (timestamp with time zone, default now())
+- `updated_at` (timestamp with time zone, default now())
+
+The `updated_at` column is automatically updated by a Postgres trigger whenever a row is modified.
