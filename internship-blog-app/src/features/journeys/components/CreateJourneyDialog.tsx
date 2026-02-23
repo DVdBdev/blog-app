@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createJourney, CreateJourneyData } from "../journeys.actions";
 import { JourneyVisibility } from "@/types";
 import {
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Plus } from "lucide-react";
+import { getDefaultJourneyVisibility } from "@/lib/user-preferences";
 
 export function CreateJourneyDialog() {
   const [open, setOpen] = useState(false);
@@ -36,6 +37,11 @@ export function CreateJourneyDialog() {
     description: "",
     visibility: "public",
   });
+
+  useEffect(() => {
+    const storedDefault = getDefaultJourneyVisibility();
+    setFormData((prev) => ({ ...prev, visibility: storedDefault }));
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -59,7 +65,8 @@ export function CreateJourneyDialog() {
         setError(result.error);
       } else {
         setOpen(false);
-        setFormData({ title: "", description: "", visibility: "public" });
+        const storedDefault = getDefaultJourneyVisibility();
+        setFormData({ title: "", description: "", visibility: storedDefault });
       }
     } catch (err) {
       console.error("Error creating journey:", err);

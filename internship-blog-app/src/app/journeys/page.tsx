@@ -16,8 +16,9 @@ async function JourneysContent() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="surface-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
+          <p className="muted-pill mb-3">Workspace</p>
           <h1 className="text-3xl font-bold tracking-tight">My Journeys</h1>
           <p className="text-muted-foreground mt-1">
             Track and share your internship experiences.
@@ -61,7 +62,7 @@ export default async function JourneysPage() {
   }
 
   return (
-    <main className="container mx-auto py-8 px-4 max-w-6xl">
+    <main className="page-shell container mx-auto py-8 px-4 max-w-6xl">
       <Suspense fallback={<JourneysSkeleton />}>
         <JourneysContent />
       </Suspense>

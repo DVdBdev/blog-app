@@ -5,6 +5,8 @@ import { ProfileHeaderCard } from "@/features/profiles/components/ProfileHeaderC
 import { ProfileDetailsCard } from "@/features/profiles/components/ProfileDetailsCard";
 import { JourneysPreview } from "@/features/profiles/components/JourneysPreview";
 import { ProfileSkeleton } from "@/features/profiles/components/ProfileSkeleton";
+import { ContributionHeatmap } from "@/features/profiles/components/ContributionHeatmap";
+import { getDailyPostContributionsByAuthor } from "@/features/posts/posts.server";
 
 export const metadata = {
   title: "My Profile | Internship Blog App",
@@ -18,6 +20,8 @@ async function ProfileContent() {
     redirect("/login");
   }
 
+  const contributions = await getDailyPostContributionsByAuthor(profile.id);
+
   return (
     <div className="space-y-8">
       <ProfileHeaderCard profile={profile} />
@@ -30,13 +34,15 @@ async function ProfileContent() {
           <JourneysPreview />
         </div>
       </div>
+
+      <ContributionHeatmap contributions={contributions} />
     </div>
   );
 }
 
 export default function MyProfilePage() {
   return (
-    <main className="container mx-auto py-8 px-4 max-w-6xl">
+    <main className="page-shell container mx-auto py-8 px-4 max-w-6xl">
       <Suspense fallback={<ProfileSkeleton />}>
         <ProfileContent />
       </Suspense>

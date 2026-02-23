@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   getProfileByUsername,
   getPublicJourneysByOwner,
@@ -54,15 +54,16 @@ async function UserJourneysContent({ username }: { username: string }) {
         asChild
         className="-ml-3 text-muted-foreground"
       >
-        <Link href="/explore">
+        <Link href={`/u/${profile.username}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Explore
+          Back to Profile
         </Link>
       </Button>
 
       {/* Author header */}
-      <div className="flex items-center gap-4">
+      <div className="surface-card p-5 flex items-center gap-4">
         <Avatar className="h-14 w-14">
+          <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
           <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
         </Avatar>
         <div>
@@ -73,7 +74,7 @@ async function UserJourneysContent({ username }: { username: string }) {
 
       {/* Section header */}
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight">Public Journeys</h2>
+        <h2 className="section-title">Public Journeys</h2>
         <p className="text-sm text-muted-foreground">
           {journeys.length === 0
             ? "No public journeys shared yet."
@@ -114,7 +115,7 @@ export default async function UserJourneysPage({ params }: UserJourneysPageProps
   const { username } = await params;
 
   return (
-    <main className="container mx-auto py-8 px-4 max-w-5xl">
+    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
       <Suspense fallback={<UserJourneysSkeleton />}>
         <UserJourneysContent username={username} />
       </Suspense>

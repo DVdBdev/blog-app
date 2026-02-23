@@ -11,6 +11,11 @@ export interface PostViewResult {
   currentUserId: string | null;
 }
 
+export interface DailyContribution {
+  date: string;
+  count: number;
+}
+
 export async function getPostsByJourneyId(
   journeyId: string,
   { publishedOnly = false }: { publishedOnly?: boolean } = {}
@@ -76,4 +81,44 @@ export async function getPostById(id: string): Promise<PostViewResult> {
   }
 
   return { post: typedPost, currentUserId };
+}
+
+export async function getDailyPostContributionsByAuthor(
+  authorId: string,
+  { publishedOnly = false }: { publishedOnly?: boolean } = {}
+): Promise<DailyContribution[]> {
+  const supabase = await createClient();
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - 364);
+
+  let query = supabase
+    .from("posts")
+    .select("created_at")
+    .eq("author_id", authorId)
+    .gte("created_at", startDate.toISOString());
+
+  if (publishedOnly) {
+    query = query.eq("status", "published");
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching daily post contributions:", error);
+    return [];
+  }
+
+  const counts = new Map<string, number>();
+
+  for (const row of data ?? []) {
+    const createdAt = row.created_at as string;
+    const day = new Date(createdAt).toISOString().slice(0, 10);
+    counts.set(day, (counts.get(day) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

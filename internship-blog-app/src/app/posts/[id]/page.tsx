@@ -43,7 +43,7 @@ async function PostContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="surface-card p-6">
         {isAuthor ? (
           <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
             <Link href={`/journeys/${post.journey_id}`}>
@@ -60,7 +60,7 @@ async function PostContent({ id }: { id: string }) {
           </Button>
         )}
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ async function PostContent({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="border rounded-lg p-6 bg-card min-h-[300px]">
+      <div className="surface-card p-6 min-h-[300px]">
         <RichTextRenderer content={post.content} />
       </div>
     </div>
@@ -124,7 +124,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const { id } = await params;
 
   return (
-    <main className="container mx-auto py-8 px-4 max-w-4xl">
+    <main className="page-shell container mx-auto py-8 px-4 max-w-4xl">
       <Suspense fallback={<PostSkeleton />}>
         <PostContent id={id} />
       </Suspense>

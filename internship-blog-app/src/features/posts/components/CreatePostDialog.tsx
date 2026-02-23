@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPost, CreatePostData } from "../posts.actions";
 import { PostStatus } from "@/types";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Plus } from "lucide-react";
 import { RichTextEditor } from "./RichTextEditor";
+import { getDefaultPostStatus } from "@/lib/user-preferences";
 
 interface CreatePostDialogProps {
   journeyId: string;
@@ -42,6 +43,11 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
     content: {},
     status: "draft",
   });
+
+  useEffect(() => {
+    const storedDefaultStatus = getDefaultPostStatus();
+    setFormData((prev) => ({ ...prev, status: storedDefaultStatus }));
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -71,11 +77,12 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
         setTimeout(() => {
           setOpen(false);
           setSuccess(false);
+          const storedDefaultStatus = getDefaultPostStatus();
           setFormData({
             journey_id: journeyId,
             title: "",
             content: {},
-            status: "draft",
+            status: storedDefaultStatus,
           });
         }, 1500);
       }

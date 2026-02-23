@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Image } from "./extensions/Image";
 
 interface RichTextRendererProps {
   content: Record<string, unknown>;
@@ -10,7 +11,7 @@ interface RichTextRendererProps {
 
 export function RichTextRenderer({ content }: RichTextRendererProps) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Image],
     content: content,
     editable: false,
     immediatelyRender: false,

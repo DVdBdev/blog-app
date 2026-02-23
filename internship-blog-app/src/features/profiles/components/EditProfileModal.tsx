@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Profile } from "@/types";
 import { updateProfile, UpdateProfileData } from "../profile.actions";
+import { createBrowserSupabaseClient } from "@/services/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -18,20 +19,28 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Pencil } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface EditProfileModalProps {
   profile: Profile;
 }
 
+const PROFILE_PICTURES_BUCKET = "profile-pictures";
+
 export function EditProfileModal({ profile }: EditProfileModalProps) {
+  const supabase = createBrowserSupabaseClient();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
 
   const [formData, setFormData] = useState<UpdateProfileData>({
     display_name: profile.display_name || "",
     bio: profile.bio || "",
+    avatar_url: profile.avatar_url || null,
     company: profile.company || "",
     field_domain: profile.field_domain || "",
     education: profile.education || "",
@@ -48,6 +57,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
       setFormData({
         display_name: profile.display_name || "",
         bio: profile.bio || "",
+        avatar_url: profile.avatar_url || null,
         company: profile.company || "",
         field_domain: profile.field_domain || "",
         education: profile.education || "",
@@ -58,16 +68,110 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
         linkedin_url: profile.linkedin_url || "",
         website_url: profile.website_url || "",
       });
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setRemoveAvatar(false);
       setError(null);
       setSuccess(false);
     }
   }, [open, profile]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const getAvatarFallback = () => {
+    if (profile.display_name) {
+      return profile.display_name.substring(0, 2).toUpperCase();
+    }
+    return profile.username.substring(0, 2).toUpperCase();
+  };
+
+  const extractStoragePath = (avatarUrl: string) => {
+    const marker = `/storage/v1/object/public/${PROFILE_PICTURES_BUCKET}/`;
+    const index = avatarUrl.indexOf(marker);
+    if (index === -1) {
+      return null;
+    }
+    return decodeURIComponent(avatarUrl.substring(index + marker.length));
+  };
+
+  const getFriendlyStorageError = (message: string) => {
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("bucket not found")) {
+      return `Storage bucket "${PROFILE_PICTURES_BUCKET}" is missing. Run migration 005_create_profile_pictures_storage.sql in your Supabase project.`;
+    }
+
+    if (normalized.includes("row-level security policy")) {
+      return `Upload blocked by Supabase Storage RLS policy. Ensure your "${PROFILE_PICTURES_BUCKET}" INSERT policy allows path "${profile.id}/..." for authenticated users.`;
+    }
+
+    return message;
+  };
+
+  const deleteExistingAvatarIfPresent = async (avatarUrl: string | null | undefined) => {
+    if (!avatarUrl) {
+      return;
+    }
+
+    const path = extractStoragePath(avatarUrl);
+    if (!path) {
+      return;
+    }
+
+    await supabase.storage.from(PROFILE_PICTURES_BUCKET).remove([path]);
+  };
+
+  const uploadAvatar = async (file: File) => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      throw new Error("You must be signed in to upload a profile picture.");
+    }
+
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    const path = `${authData.user.id}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(PROFILE_PICTURES_BUCKET)
+      .upload(path, file, { upsert: false });
+
+    if (uploadError) {
+      throw new Error(getFriendlyStorageError(uploadError.message));
+    }
+
+    const { data: publicData } = supabase.storage
+      .from(PROFILE_PICTURES_BUCKET)
+      .getPublicUrl(path);
+
+    return publicData.publicUrl;
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setRemoveAvatar(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +181,22 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
     setSuccess(false);
 
     try {
-      const result = await updateProfile(formData);
+      let nextAvatarUrl = formData.avatar_url ?? profile.avatar_url;
+
+      if (avatarFile) {
+        await deleteExistingAvatarIfPresent(profile.avatar_url);
+        nextAvatarUrl = await uploadAvatar(avatarFile);
+      } else if (removeAvatar) {
+        await deleteExistingAvatarIfPresent(profile.avatar_url);
+        nextAvatarUrl = null;
+      }
+
+      const payload: UpdateProfileData = {
+        ...formData,
+        avatar_url: nextAvatarUrl,
+      };
+
+      const result = await updateProfile(payload);
       if (result.error) {
         setError(result.error);
       } else {
@@ -89,7 +208,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      setError("An unexpected error occurred.");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
@@ -153,6 +272,48 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
               onChange={handleChange}
               placeholder="Your name"
             />
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="avatar_upload">Profile Picture</Label>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage
+                  src={removeAvatar ? undefined : avatarPreview || formData.avatar_url || undefined}
+                  alt={profile.username}
+                />
+                <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
+              </Avatar>
+              <Input
+                id="avatar_upload"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                onChange={handleAvatarChange}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (avatarPreview) {
+                    URL.revokeObjectURL(avatarPreview);
+                  }
+                  setAvatarFile(null);
+                  setAvatarPreview(null);
+                  setRemoveAvatar(true);
+                }}
+                disabled={isLoading || (!formData.avatar_url && !avatarPreview)}
+              >
+                Remove Photo
+              </Button>
+              {avatarFile && (
+                <p className="text-xs text-muted-foreground self-center">
+                  New image selected: {avatarFile.name}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

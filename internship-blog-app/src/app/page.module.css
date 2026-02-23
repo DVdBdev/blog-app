@@ -1,141 +1,150 @@
 .page {
-  --background: #fafafa;
-  --foreground: #fff;
+  min-height: calc(100vh - 72px);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 4rem;
+}
 
-  --text-primary: #000;
-  --text-secondary: #666;
+.hero {
+  max-width: 820px;
+  margin: 0 auto;
+  text-align: center;
+}
 
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
-
-  display: flex;
-  min-height: 100vh;
+.badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-family: var(--font-geist-sans);
-  background-color: var(--background);
-}
-
-.main {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
-  max-width: 800px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  background-color: var(--foreground);
-  padding: 120px 60px;
-}
-
-.intro {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  gap: 24px;
-}
-
-.intro h1 {
-  max-width: 320px;
-  font-size: 40px;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-card) 86%, transparent);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  line-height: 48px;
-  letter-spacing: -2.4px;
+  color: var(--color-muted-foreground);
+}
+
+.title {
+  margin-top: 1rem;
+  font-size: clamp(2rem, 5vw, 3.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 800;
   text-wrap: balance;
-  color: var(--text-primary);
 }
 
-.intro p {
-  max-width: 440px;
-  font-size: 18px;
-  line-height: 32px;
-  text-wrap: balance;
-  color: var(--text-secondary);
+.subtitle {
+  margin: 1rem auto 0;
+  max-width: 700px;
+  color: var(--color-muted-foreground);
+  font-size: clamp(1rem, 2.2vw, 1.18rem);
+  line-height: 1.7;
 }
 
-.intro a {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.ctas {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  max-width: 440px;
-  gap: 16px;
-  font-size: 14px;
-}
-
-.ctas a {
+.actions {
+  margin-top: 1.8rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 128px;
-  border: 1px solid transparent;
-  transition: 0.2s;
-  cursor: pointer;
-  width: fit-content;
-  font-weight: 500;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
-a.primary {
-  background: var(--text-primary);
-  color: var(--background);
-  gap: 8px;
+.primaryCta,
+.secondaryCta {
+  min-width: 190px;
 }
 
-a.secondary {
-  border-color: var(--button-secondary-border);
+.grid {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1.1rem;
+  background: color-mix(in oklab, var(--color-card) 86%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 20px 40px -36px rgba(0, 0, 0, 0.6);
+  transition: transform 220ms ease, border-color 220ms ease;
+}
 
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
+.card h2 {
+  margin-top: 0.7rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.card p {
+  margin-top: 0.5rem;
+  color: var(--color-muted-foreground);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.iconWrap {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--color-chart-2) 20%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-chart-2) 40%, var(--color-border));
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--color-chart-2) 40%, var(--color-border));
+}
+
+.reveal1,
+.reveal2,
+.reveal3,
+.reveal4 {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fadeUp 650ms ease forwards;
+}
+
+.reveal2 {
+  animation-delay: 80ms;
+}
+
+.reveal3 {
+  animation-delay: 160ms;
+}
+
+.reveal4 {
+  animation-delay: 240ms;
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (max-width: 600px) {
-  .main {
-    padding: 48px 24px;
-  }
-
-  .intro {
-    gap: 16px;
-  }
-
-  .intro h1 {
-    font-size: 32px;
-    line-height: 40px;
-    letter-spacing: -1.92px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
-  }
-
+@media (max-width: 900px) {
   .page {
-    --background: #000;
-    --foreground: #000;
+    padding-top: 3.5rem;
+  }
 
-    --text-primary: #ededed;
-    --text-secondary: #999;
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
 
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-    --button-secondary-border: #1a1a1a;
+@media (prefers-reduced-motion: reduce) {
+  .reveal1,
+  .reveal2,
+  .reveal3,
+  .reveal4 {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

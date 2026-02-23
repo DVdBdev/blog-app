@@ -53,7 +53,7 @@ async function JourneyContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="surface-card p-6">
         <Button
           variant="ghost"
           size="sm"
@@ -73,7 +73,7 @@ async function JourneyContent({ id }: { id: string }) {
           )}
         </Button>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">{journey.title}</h1>
@@ -103,7 +103,7 @@ async function JourneyContent({ id }: { id: string }) {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Posts</h2>
+        <h2 className="section-title">Posts</h2>
         <PostList posts={posts} />
       </div>
     </div>
@@ -142,7 +142,7 @@ export default async function JourneyPage({ params }: JourneyPageProps) {
   const { id } = await params;
 
   return (
-    <main className="container mx-auto py-8 px-4 max-w-4xl">
+    <main className="page-shell container mx-auto py-8 px-4 max-w-4xl">
       <Suspense fallback={<JourneySkeleton />}>
         <JourneyContent id={id} />
       </Suspense>
