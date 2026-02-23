@@ -1,6 +1,7 @@
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function Navbar({ user }: { user: { email?: string } | null }) {
   return (
@@ -10,6 +11,7 @@ export function Navbar({ user }: { user: { email?: string } | null }) {
       </Link>
 
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         {user ? (
           <>
             <Link href="/journeys" className="text-sm font-medium hover:text-primary">
