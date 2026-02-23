@@ -1,7 +1,7 @@
 import { createClient } from "@/services/supabase/server";
-import { Journey } from "@/types";
+import { Post } from "@/types";
 
-export async function getMyJourneys(): Promise<Journey[]> {
+export async function getPostsByJourneyId(journeyId: string): Promise<Post[]> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,21 +12,22 @@ export async function getMyJourneys(): Promise<Journey[]> {
     return [];
   }
 
-  const { data: journeys, error } = await supabase
-    .from("journeys")
+  const { data: posts, error } = await supabase
+    .from("posts")
     .select("*")
-    .eq("owner_id", user.id)
+    .eq("journey_id", journeyId)
+    .eq("author_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching journeys:", error);
+    console.error("Error fetching posts:", error);
     return [];
   }
 
-  return journeys as Journey[];
+  return posts as Post[];
 }
 
-export async function getJourneyById(id: string): Promise<Journey | null> {
+export async function getPostById(id: string): Promise<Post | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,17 +38,17 @@ export async function getJourneyById(id: string): Promise<Journey | null> {
     return null;
   }
 
-  const { data: journey, error } = await supabase
-    .from("journeys")
+  const { data: post, error } = await supabase
+    .from("posts")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", user.id)
+    .eq("author_id", user.id)
     .single();
 
   if (error) {
-    console.error("Error fetching journey:", error);
+    console.error("Error fetching post:", error);
     return null;
   }
 
-  return journey as Journey;
+  return post as Post;
 }

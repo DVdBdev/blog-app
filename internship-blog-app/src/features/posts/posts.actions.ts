@@ -2,15 +2,16 @@
 
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
-import { JourneyVisibility } from "@/types";
+import { PostStatus } from "@/types";
 
-export interface CreateJourneyData {
+export interface CreatePostData {
+  journey_id: string;
   title: string;
-  description?: string;
-  visibility: JourneyVisibility;
+  content: Record<string, unknown>; // JSONB
+  status: PostStatus;
 }
 
-export async function createJourney(data: CreateJourneyData) {
+export async function createPost(data: CreatePostData) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,32 +26,33 @@ export async function createJourney(data: CreateJourneyData) {
     return { error: "Title is required" };
   }
 
-  const { error } = await supabase.from("journeys").insert([
+  const { error } = await supabase.from("posts").insert([
     {
-      owner_id: user.id,
+      journey_id: data.journey_id,
+      author_id: user.id,
       title: data.title.trim(),
-      description: data.description?.trim() || null,
-      visibility: data.visibility,
+      content: data.content,
+      status: data.status,
     },
   ]);
 
   if (error) {
-    console.error("Error creating journey:", error);
-    return { error: "Failed to create journey" };
+    console.error("Error creating post:", error);
+    return { error: "Failed to create post" };
   }
 
-  revalidatePath("/journeys");
+  revalidatePath(`/journeys/${data.journey_id}`);
   return { success: true };
 }
 
-export interface UpdateJourneyData {
+export interface UpdatePostData {
   id: string;
   title: string;
-  description?: string;
-  visibility: JourneyVisibility;
+  content: Record<string, unknown>;
+  status: PostStatus;
 }
 
-export async function updateJourney(data: UpdateJourneyData) {
+export async function updatePost(data: UpdatePostData) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,21 +68,20 @@ export async function updateJourney(data: UpdateJourneyData) {
   }
 
   const { error } = await supabase
-    .from("journeys")
+    .from("posts")
     .update({
       title: data.title.trim(),
-      description: data.description?.trim() || null,
-      visibility: data.visibility,
+      content: data.content,
+      status: data.status,
     })
     .eq("id", data.id)
-    .eq("owner_id", user.id);
+    .eq("author_id", user.id);
 
   if (error) {
-    console.error("Error updating journey:", error);
-    return { error: "Failed to update journey" };
+    console.error("Error updating post:", error);
+    return { error: "Failed to update post" };
   }
 
-  revalidatePath(`/journeys/${data.id}`);
-  revalidatePath("/journeys");
+  revalidatePath(`/posts/${data.id}`);
   return { success: true };
 }

@@ -29,3 +29,17 @@ export interface Journey {
   created_at: string;
   updated_at: string;
 }
+
+export type PostStatus = "draft" | "published";
+
+export interface Post {
+  id: string;
+  journey_id: string;
+  author_id: string;
+  title: string;
+  content: Record<string, unknown>; // JSONB
+  excerpt: string | null;
+  status: PostStatus;
+  created_at: string;
+  updated_at: string;
+}
