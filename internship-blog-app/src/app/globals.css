@@ -183,6 +183,18 @@
 }
 
 @layer components {
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition:
+      background-color 280ms ease,
+      border-color 280ms ease,
+      color 220ms ease,
+      fill 220ms ease,
+      stroke 220ms ease,
+      box-shadow 280ms ease;
+  }
+
   .page-shell {
     @apply relative;
   }

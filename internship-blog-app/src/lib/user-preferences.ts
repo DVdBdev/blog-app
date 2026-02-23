@@ -5,6 +5,8 @@ export const DEFAULT_JOURNEY_VISIBILITY_KEY = "blogapp.default_journey_visibilit
 export const DEFAULT_POST_STATUS_KEY = "blogapp.default_post_status";
 
 export type ThemePreference = "system" | "light" | "dark";
+const THEME_TRANSITION_CLASS = "theme-transition";
+const THEME_TRANSITION_MS = 280;
 
 function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
@@ -27,15 +29,21 @@ export function applyThemePreference(theme: ThemePreference) {
     return;
   }
 
+  const root = document.documentElement;
+  root.classList.add(THEME_TRANSITION_CLASS);
+
   if (theme === "system") {
     window.localStorage.removeItem(THEME_STORAGE_KEY);
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.classList.toggle("dark", prefersDark);
-    return;
+    root.classList.toggle("dark", prefersDark);
+  } else {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    root.classList.toggle("dark", theme === "dark");
   }
 
-  window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  window.setTimeout(() => {
+    root.classList.remove(THEME_TRANSITION_CLASS);
+  }, THEME_TRANSITION_MS);
 }
 
 export function getDefaultJourneyVisibility(): JourneyVisibility {
