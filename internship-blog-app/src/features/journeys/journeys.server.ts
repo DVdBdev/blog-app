@@ -1,6 +1,12 @@
 import { createClient } from "@/services/supabase/server";
 import { Journey } from "@/types";
 
+export interface JourneyViewResult {
+  journey: Journey | null;
+  /** The authenticated user's id, or null if unauthenticated. */
+  currentUserId: string | null;
+}
+
 export async function getMyJourneys(): Promise<Journey[]> {
   const supabase = await createClient();
   const {
@@ -26,28 +32,33 @@ export async function getMyJourneys(): Promise<Journey[]> {
   return journeys as Journey[];
 }
 
-export async function getJourneyById(id: string): Promise<Journey | null> {
+export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   const supabase = await createClient();
+
+  // currentUserId may be null for unauthenticated visitors.
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return null;
-  }
+  const currentUserId = user?.id ?? null;
 
   const { data: journey, error } = await supabase
     .from("journeys")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", user.id)
     .single();
 
   if (error) {
     console.error("Error fetching journey:", error);
-    return null;
+    return { journey: null, currentUserId };
   }
 
-  return journey as Journey;
+  const typedJourney = journey as Journey;
+
+  // Deny access to private journeys for non-owners (defence-in-depth; RLS handles it too).
+  if (typedJourney.visibility === "private" && currentUserId !== typedJourney.owner_id) {
+    return { journey: null, currentUserId };
+  }
+
+  return { journey: typedJourney, currentUserId };
 }

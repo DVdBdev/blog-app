@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getJourneyById } from "@/features/journeys/journeys.server";
 import { getPostsByJourneyId } from "@/features/posts/posts.server";
 import { EditJourneyDialog } from "@/features/journeys/components/EditJourneyDialog";
@@ -7,67 +7,98 @@ import { CreatePostDialog } from "@/features/posts/components/CreatePostDialog";
 import { PostList } from "@/features/posts/components/PostList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Globe, Lock, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-
-export const metadata = {
-  title: "Journey Details | Internship Blog App",
-};
+import type { Metadata } from "next";
 
 interface JourneyPageProps {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({ params }: JourneyPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const { journey } = await getJourneyById(id);
+  return {
+    title: journey
+      ? `${journey.title} | Internship Blog App`
+      : "Journey | Internship Blog App",
+  };
+}
+
+function getVisibilityIcon(visibility: string) {
+  switch (visibility) {
+    case "public":
+      return <Globe className="h-3 w-3 mr-1" />;
+    case "private":
+      return <Lock className="h-3 w-3 mr-1" />;
+    case "unlisted":
+      return <LinkIcon className="h-3 w-3 mr-1" />;
+    default:
+      return null;
+  }
+}
+
 async function JourneyContent({ id }: { id: string }) {
-  const journey = await getJourneyById(id);
+  const { journey, currentUserId } = await getJourneyById(id);
 
   if (!journey) {
-    redirect("/journeys");
+    notFound();
   }
 
-  const posts = await getPostsByJourneyId(id);
+  const isOwner = !!currentUserId && currentUserId === journey.owner_id;
 
-  const getVisibilityIcon = () => {
-    switch (journey.visibility) {
-      case "public":
-        return <Globe className="h-3 w-3 mr-1" />;
-      case "private":
-        return <Lock className="h-3 w-3 mr-1" />;
-      case "unlisted":
-        return <LinkIcon className="h-3 w-3 mr-1" />;
-      default:
-        return null;
-    }
-  };
+  // Owners see all posts; public viewers only see published posts.
+  const posts = await getPostsByJourneyId(id, { publishedOnly: !isOwner });
 
   return (
     <div className="space-y-8">
       <div>
-        <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
-          <Link href="/journeys">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Journeys
-          </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="mb-4 -ml-3 text-muted-foreground"
+        >
+          {isOwner ? (
+            <Link href="/journeys">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to My Journeys
+            </Link>
+          ) : (
+            <Link href="/explore">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Explore
+            </Link>
+          )}
         </Button>
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">{journey.title}</h1>
-              <Badge variant="secondary" className="capitalize flex items-center whitespace-nowrap">
-                {getVisibilityIcon()}
-                {journey.visibility}
-              </Badge>
+              {/* Visibility badge is only useful context for the owner */}
+              {isOwner && (
+                <Badge
+                  variant="secondary"
+                  className="capitalize flex items-center whitespace-nowrap"
+                >
+                  {getVisibilityIcon(journey.visibility)}
+                  {journey.visibility}
+                </Badge>
+              )}
             </div>
             {journey.description && (
               <p className="text-muted-foreground max-w-3xl">{journey.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <EditJourneyDialog journey={journey} />
-            <CreatePostDialog journeyId={journey.id} />
-          </div>
+
+          {isOwner && (
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <EditJourneyDialog journey={journey} />
+              <CreatePostDialog journeyId={journey.id} />
+            </div>
+          )}
         </div>
       </div>
 

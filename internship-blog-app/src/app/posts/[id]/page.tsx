@@ -4,20 +4,25 @@ import { EditPostDialog } from "@/features/posts/components/EditPostDialog";
 import { RichTextRenderer } from "@/features/posts/components/RichTextRenderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays, User } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export const metadata = {
-  title: "Post Details | Internship Blog App",
-};
+import type { Metadata } from "next";
 
 interface PostPageProps {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const { post } = await getPostById(id);
+  return {
+    title: post ? `${post.title} | Internship Blog App` : "Post | Internship Blog App",
+  };
+}
+
 async function PostContent({ id }: { id: string }) {
-  const post = await getPostById(id);
+  const { post, currentUserId } = await getPostById(id);
 
   if (!post) {
     return (
@@ -33,28 +38,51 @@ async function PostContent({ id }: { id: string }) {
     );
   }
 
+  const isAuthor = !!currentUserId && currentUserId === post.author_id;
+  const authorName = post.profiles?.display_name ?? post.profiles?.username;
+
   return (
     <div className="space-y-8">
       <div>
-        <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
-          <Link href={`/journeys/${post.journey_id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Journey
-          </Link>
-        </Button>
+        {isAuthor ? (
+          <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
+            <Link href={`/journeys/${post.journey_id}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Journey
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
+            <Link href="/explore">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Explore
+            </Link>
+          </Button>
+        )}
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <Badge variant={post.status === "published" ? "default" : "secondary"} className="capitalize">
-                {post.status}
-              </Badge>
+              {/* Status badge is only meaningful / shown to the author */}
+              {isAuthor && (
+                <Badge
+                  variant={post.status === "published" ? "default" : "secondary"}
+                  className="capitalize"
+                >
+                  {post.status}
+                </Badge>
+              )}
+              {/* Author name shown to non-author viewers */}
+              {!isAuthor && authorName && (
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  <span>{authorName}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <CalendarDays className="h-4 w-4" />
-                <span>
-                  Created {new Date(post.created_at).toLocaleDateString()}
-                </span>
+                <span>Created {new Date(post.created_at).toLocaleDateString()}</span>
               </div>
               {post.updated_at !== post.created_at && (
                 <span className="italic">
@@ -63,7 +91,7 @@ async function PostContent({ id }: { id: string }) {
               )}
             </div>
           </div>
-          <EditPostDialog post={post} />
+          {isAuthor && <EditPostDialog post={post} />}
         </div>
       </div>
 
