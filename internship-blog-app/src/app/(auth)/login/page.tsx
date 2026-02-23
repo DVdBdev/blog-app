@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/features/auth/auth.service";
@@ -9,14 +9,26 @@ import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthMessage } from "@/features/auth/components/AuthMessage";
 import { validateEmail } from "@/features/auth/lib/validation";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+
+const REMEMBERED_EMAIL_KEY = "blogapp.remembered_email";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string }>({});
+
+  useEffect(() => {
+    const remembered = window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
+    if (remembered) {
+      setEmail(remembered);
+      setRememberEmail(true);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,9 +56,15 @@ export default function LoginPage() {
         return;
       }
 
+      if (rememberEmail) {
+        window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      } else {
+        window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      }
+
       router.push("/");
       router.refresh();
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -66,7 +84,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
         <AuthMessage type="error" message={error} />
         
         <AuthField
@@ -78,7 +96,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}
           disabled={isLoading}
-          autoComplete="email"
+          autoComplete="username"
         />
 
         <div className="space-y-2">
@@ -92,6 +110,24 @@ export default function LoginPage() {
             autoComplete="current-password"
             className="w-full"
           />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <input
+                id="remember-email"
+                type="checkbox"
+                className="h-4 w-4 rounded border-input bg-background"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="remember-email" className="text-sm font-normal text-muted-foreground">
+                Remember email
+              </Label>
+            </div>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Password can be saved by your browser
+            </span>
+          </div>
           <div className="flex justify-end">
             <Link
               href="/forgot-password"

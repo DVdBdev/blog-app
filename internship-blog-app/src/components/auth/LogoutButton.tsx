@@ -11,7 +11,7 @@ export function LogoutButton() {
     await signOut();
 
     // Trigger server re-render
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 
