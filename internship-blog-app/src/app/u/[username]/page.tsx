@@ -81,11 +81,11 @@ async function PublicProfileContent({ username }: { username: string }) {
             </div>
 
             <div className="w-full sm:w-auto grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-md border border-border/70 bg-background/35 px-3 py-2">
+              <div className="rounded-md border border-border/70 bg-card/80 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Public journeys</p>
                 <p className="font-semibold">{journeys.length}</p>
               </div>
-              <div className="rounded-md border border-border/70 bg-background/35 px-3 py-2">
+              <div className="rounded-md border border-border/70 bg-card/80 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Contributions (1Y)</p>
                 <p className="font-semibold">{contributions.length}</p>
               </div>

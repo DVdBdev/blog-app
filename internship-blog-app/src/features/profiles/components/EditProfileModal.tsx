@@ -300,7 +300,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
 
           <div className="space-y-3">
             <Label htmlFor="avatar_upload">Profile Picture</Label>
-            <div className="flex items-center gap-4 rounded-lg border border-border/70 bg-background/40 p-3">
+            <div className="flex items-center gap-4 rounded-lg border border-border/70 bg-card/80 p-3">
               <Avatar className="h-16 w-16">
                 <AvatarImage
                   src={removeAvatar ? undefined : avatarPreview || formData.avatar_url || undefined}

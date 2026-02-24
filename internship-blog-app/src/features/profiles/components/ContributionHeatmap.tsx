@@ -189,7 +189,7 @@ export function ContributionHeatmap({
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{title}</CardTitle>
-          <div className="inline-flex rounded-md border border-border/70 bg-background/40 p-1">
+          <div className="inline-flex rounded-md border border-border/70 bg-card/80 p-1">
             {(["30D", "90D", "1Y"] as TimeframeOption[]).map((option) => (
               <button
                 key={option}
@@ -211,15 +211,15 @@ export function ContributionHeatmap({
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+          <div className="rounded-lg border border-border/60 bg-card/80 p-3">
             <p className="text-xs text-muted-foreground">Current streak</p>
             <p className="mt-1 text-xl font-semibold">{streak} day{streak === 1 ? "" : "s"}</p>
           </div>
-          <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+          <div className="rounded-lg border border-border/60 bg-card/80 p-3">
             <p className="text-xs text-muted-foreground">Busiest week</p>
             <p className="mt-1 text-xl font-semibold">{busiestWeek.total}</p>
           </div>
-          <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+          <div className="rounded-lg border border-border/60 bg-card/80 p-3">
             <p className="text-xs text-muted-foreground">Weekly average</p>
             <p className="mt-1 text-xl font-semibold">
               {weeklyTotals.length ? (totalContributions / weeklyTotals.length).toFixed(1) : "0.0"}
@@ -240,7 +240,7 @@ export function ContributionHeatmap({
               ))}
             </div>
 
-            <div className="relative rounded-xl border border-border/60 bg-background/30 p-3">
+            <div className="relative rounded-xl border border-border/60 bg-card/80 p-3">
               <svg
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                 className="h-44 w-full"
