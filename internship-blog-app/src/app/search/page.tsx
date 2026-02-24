@@ -2,12 +2,7 @@ import Link from "next/link";
 import { Search, FileText, Map, CalendarDays, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  searchPublicContent,
-  SearchResultItem,
-  SearchSort,
-  SearchType,
-} from "@/features/search/search.server";
+import { searchPublicContent, SearchResultItem, SearchSort } from "@/features/search/search.server";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -17,9 +12,9 @@ interface SearchPageProps {
   }>;
 }
 
-function normalizeType(value: string | undefined): SearchType {
-  if (value === "posts" || value === "journeys") return value;
-  return "all";
+function normalizeType(value: string | undefined): "journeys" {
+  if (value === "journeys") return "journeys";
+  return "journeys";
 }
 
 function normalizeSort(value: string | undefined): SearchSort {
@@ -110,7 +105,7 @@ function SearchResultCard({ item }: { item: SearchResultItem }) {
 
 export const metadata = {
   title: "Search | Internship Blog App",
-  description: "Search published posts and public journeys",
+  description: "Search public journeys",
 };
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
@@ -133,31 +128,23 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <p className="muted-pill mb-3">Explore</p>
             <h1 className="section-title">Search</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Find published posts and public journeys by keyword, creator, or title.
+              Find public journeys by keyword, creator, or title.
             </p>
           </div>
 
-          <form action="/search" method="get" className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+          <form action="/search" method="get" className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 name="q"
                 defaultValue={query}
-                placeholder="Search posts, journeys, usernames..."
+                placeholder="Search journeys and usernames..."
                 className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
 
-            <select
-              name="type"
-              defaultValue={type}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="all">All</option>
-              <option value="posts">Posts</option>
-              <option value="journeys">Journeys</option>
-            </select>
+            <input type="hidden" name="type" value="journeys" />
 
             <select
               name="sort"
@@ -190,7 +177,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </div>
               <h2 className="text-xl font-semibold">No matching content</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Try a broader keyword, switch filters, or sort by newest.
+                Try a broader keyword or sort by newest.
               </p>
             </div>
           ) : (

@@ -104,6 +104,8 @@ export async function searchPublicContent({
   const normalizedQuery = normalizeTerm(query);
   const hasTerm = normalizedQuery.length > 0;
   const likePattern = `%${escapeLike(normalizedQuery)}%`;
+  void type;
+  const effectiveType: SearchType = "journeys";
 
   let matchingProfileIds: string[] = [];
   if (hasTerm) {
@@ -116,33 +118,10 @@ export async function searchPublicContent({
     matchingProfileIds = (matchedProfiles ?? []).map((p) => p.id as string);
   }
 
-  let posts: SearchPost[] = [];
-  if (type === "all" || type === "posts") {
-    let postQuery = supabase
-      .from("posts")
-      .select("id,title,excerpt,created_at,author_id,journey_id,status")
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(limitPerType);
-
-    if (hasTerm) {
-      const clauses = [`title.ilike.${likePattern}`, `excerpt.ilike.${likePattern}`];
-      if (matchingProfileIds.length > 0) {
-        clauses.push(`author_id.in.(${matchingProfileIds.join(",")})`);
-      }
-      postQuery = postQuery.or(clauses.join(","));
-    }
-
-    const { data: postData, error } = await postQuery;
-    if (error) {
-      console.error("Error searching posts:", error);
-    } else {
-      posts = (postData ?? []) as SearchPost[];
-    }
-  }
+  const posts: SearchPost[] = [];
 
   let journeys: Journey[] = [];
-  if (type === "all" || type === "journeys") {
+  if (effectiveType === "journeys") {
     let journeyQuery = supabase
       .from("journeys")
       .select("id,owner_id,title,description,visibility,created_at,updated_at")
@@ -166,12 +145,7 @@ export async function searchPublicContent({
     }
   }
 
-  const profileIds = Array.from(
-    new Set([
-      ...posts.map((post) => post.author_id),
-      ...journeys.map((journey) => journey.owner_id),
-    ]),
-  );
+  const profileIds = Array.from(new Set(journeys.map((journey) => journey.owner_id)));
 
   const journeyIds = Array.from(new Set(posts.map((post) => post.journey_id)));
 
@@ -264,7 +238,7 @@ export async function searchPublicContent({
 
   return {
     query,
-    type,
+    type: effectiveType,
     sort,
     total: items.length,
     items,
