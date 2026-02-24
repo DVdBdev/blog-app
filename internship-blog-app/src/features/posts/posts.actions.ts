@@ -91,3 +91,42 @@ export async function updatePost(data: UpdatePostData) {
   revalidatePath(`/posts/${data.id}`);
   return { success: true, post: updated };
 }
+
+export interface DeletePostData {
+  id: string;
+}
+
+export async function deletePost(data: DeletePostData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Not authenticated" };
+  }
+
+  const { data: deletedPost, error } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", data.id)
+    .eq("author_id", user.id)
+    .select("id,journey_id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error deleting post:", error);
+    return { error: "Failed to delete post" };
+  }
+
+  if (!deletedPost) {
+    return { error: "Post not found or not authorized" };
+  }
+
+  const journeyId = deletedPost.journey_id as string;
+  revalidatePath(`/posts/${data.id}`);
+  revalidatePath(`/journeys/${journeyId}`);
+  revalidatePath("/search");
+  return { success: true, journeyId };
+}

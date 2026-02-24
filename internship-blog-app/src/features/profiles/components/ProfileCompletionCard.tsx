@@ -88,6 +88,30 @@ export function ProfileCompletionCard({
   const completedCount = tasks.filter((task) => task.completed).length;
   const progress = Math.round((completedCount / tasks.length) * 100);
   const nextTask = tasks.find((task) => !task.completed) ?? null;
+  const isComplete = completedCount === tasks.length;
+
+  if (isComplete) {
+    return (
+      <Card className="surface-card">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Profile Complete</CardTitle>
+            <Badge variant="default">100%</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <p className="text-sm text-foreground">
+                Nice work. Your profile is fully set up and ready for visitors.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="surface-card">

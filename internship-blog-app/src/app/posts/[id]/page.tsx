@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getPostById } from "@/features/posts/posts.server";
 import { EditPostDialog } from "@/features/posts/components/EditPostDialog";
+import { DeletePostButton } from "@/features/posts/components/DeletePostButton";
 import { RichTextRenderer } from "@/features/posts/components/RichTextRenderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,16 @@ async function PostContent({ id }: { id: string }) {
               )}
             </div>
           </div>
-          {isAuthor && <EditPostDialog post={post} />}
+          {isAuthor && (
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="w-full md:w-auto">
+                <EditPostDialog post={post} />
+              </div>
+              <div className="w-full md:w-auto flex md:block justify-end">
+                <DeletePostButton postId={post.id} postTitle={post.title} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

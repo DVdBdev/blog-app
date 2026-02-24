@@ -30,7 +30,7 @@ async function ProfileContent() {
   return (
     <div className="space-y-8">
       <ProfileHeaderCard profile={profile} />
-      
+
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
           <ProfileDetailsCard profile={profile} />

@@ -84,3 +84,41 @@ export async function updateJourney(data: UpdateJourneyData) {
   revalidatePath("/journeys");
   return { success: true };
 }
+
+export interface DeleteJourneyData {
+  id: string;
+}
+
+export async function deleteJourney(data: DeleteJourneyData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Not authenticated" };
+  }
+
+  const { data: deletedJourney, error } = await supabase
+    .from("journeys")
+    .delete()
+    .eq("id", data.id)
+    .eq("owner_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error deleting journey:", error);
+    return { error: "Failed to delete journey" };
+  }
+
+  if (!deletedJourney) {
+    return { error: "Journey not found or not authorized" };
+  }
+
+  revalidatePath(`/journeys/${data.id}`);
+  revalidatePath("/journeys");
+  revalidatePath("/search");
+  return { success: true };
+}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getJourneyById } from "@/features/journeys/journeys.server";
 import { getPostsByJourneyId } from "@/features/posts/posts.server";
 import { EditJourneyDialog } from "@/features/journeys/components/EditJourneyDialog";
+import { DeleteJourneyButton } from "@/features/journeys/components/DeleteJourneyButton";
 import { CreatePostDialog } from "@/features/posts/components/CreatePostDialog";
 import { PostList } from "@/features/posts/components/PostList";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -95,9 +96,16 @@ async function JourneyContent({ id }: { id: string }) {
           </div>
 
           {isOwner && (
-            <div className="flex items-center gap-2 w-full md:w-auto [&>*]:w-full md:[&>*]:w-auto">
-              <EditJourneyDialog journey={journey} />
-              <CreatePostDialog journeyId={journey.id} />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="w-full md:w-auto">
+                <EditJourneyDialog journey={journey} />
+              </div>
+              <div className="w-full md:w-auto">
+                <CreatePostDialog journeyId={journey.id} />
+              </div>
+              <div className="w-full md:w-auto flex md:block justify-end">
+                <DeleteJourneyButton journeyId={journey.id} journeyTitle={journey.title} />
+              </div>
             </div>
           )}
         </div>
