@@ -106,7 +106,7 @@ export default async function Home() {
 
       {isLoggedIn ? (
         <section className={styles.grid}>
-          <article className={`${styles.card} interactive-card ${styles.reveal2}`}>
+          <article className={`${styles.card} ${styles.cardInteractiveLite} ${styles.reveal2}`}>
             <div className={styles.iconWrap}>
               <BookText className="h-5 w-5" />
             </div>
@@ -117,7 +117,7 @@ export default async function Home() {
             </Button>
           </article>
 
-          <article className={`${styles.card} interactive-card ${styles.reveal3}`}>
+          <article className={`${styles.card} ${styles.cardInteractiveLite} ${styles.reveal3}`}>
             <div className={styles.iconWrap}>
               <Globe2 className="h-5 w-5" />
             </div>
@@ -128,7 +128,7 @@ export default async function Home() {
             </Button>
           </article>
 
-          <article className={`${styles.card} interactive-card ${styles.reveal4}`}>
+          <article className={`${styles.card} ${styles.cardInteractiveLite} ${styles.reveal4}`}>
             <div className={styles.iconWrap}>
               <Sparkles className="h-5 w-5" />
             </div>
@@ -141,7 +141,7 @@ export default async function Home() {
         </section>
       ) : (
         <section className={styles.grid}>
-          <article className={`${styles.card} interactive-card ${styles.reveal2}`}>
+          <article className={`${styles.card} ${styles.reveal2}`}>
             <div className={styles.iconWrap}>
               <BookText className="h-5 w-5" />
             </div>
@@ -149,7 +149,7 @@ export default async function Home() {
             <p>Format text with headings, lists, quotes, and images to make each update stand out.</p>
           </article>
 
-          <article className={`${styles.card} interactive-card ${styles.reveal3}`}>
+          <article className={`${styles.card} ${styles.reveal3}`}>
             <div className={styles.iconWrap}>
               <Globe2 className="h-5 w-5" />
             </div>
@@ -157,7 +157,7 @@ export default async function Home() {
             <p>Keep drafts private, publish when ready, and share your profile and journeys with confidence.</p>
           </article>
 
-          <article className={`${styles.card} interactive-card ${styles.reveal4}`}>
+          <article className={`${styles.card} ${styles.reveal4}`}>
             <div className={styles.iconWrap}>
               <Sparkles className="h-5 w-5" />
             </div>
@@ -166,6 +166,8 @@ export default async function Home() {
           </article>
         </section>
       )}
+
+      <div className={styles.sectionDivider} aria-hidden />
 
       <section className={`${styles.rhythm} ${styles.reveal4}`}>
         <div className={styles.rhythmHeader}>

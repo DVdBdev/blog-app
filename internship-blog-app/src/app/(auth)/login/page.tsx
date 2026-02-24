@@ -72,76 +72,78 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard
-      title="Welcome back"
-      description="Enter your email to sign in to your account"
-      footer={
-        <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="underline underline-offset-4 hover:text-primary">
-            Sign up
-          </Link>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
-        <AuthMessage type="error" message={error} />
-        
-        <AuthField
-          id="email"
-          label="Email"
-          type="email"
-          placeholder="m@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={fieldErrors.email}
-          disabled={isLoading}
-          autoComplete="username"
-        />
-
-        <div className="space-y-2">
-          <AuthField
-            id="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
-            autoComplete="current-password"
-            className="w-full"
-          />
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <input
-                id="remember-email"
-                type="checkbox"
-                className="h-4 w-4 rounded border-input bg-background"
-                checked={rememberEmail}
-                onChange={(e) => setRememberEmail(e.target.checked)}
-                disabled={isLoading}
-              />
-              <Label htmlFor="remember-email" className="text-sm font-normal text-muted-foreground">
-                Remember email
-              </Label>
-            </div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Password can be saved by your browser
-            </span>
-          </div>
-          <div className="flex justify-end">
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-muted-foreground hover:text-primary"
-            >
-              Forgot password?
+    <main className="page-shell">
+      <AuthCard
+        title="Welcome back"
+        description="Enter your email to sign in to your account"
+        footer={
+          <div className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="underline underline-offset-4 hover:text-primary">
+              Sign up
             </Link>
           </div>
-        </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4 auth-form-stagger" autoComplete="on">
+          <AuthMessage type="error" message={error} />
+          
+          <AuthField
+            id="email"
+            label="Email"
+            type="email"
+            placeholder="m@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={fieldErrors.email}
+            disabled={isLoading}
+            autoComplete="username"
+          />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Signing in..." : "Sign in"}
-        </Button>
-      </form>
-    </AuthCard>
+          <div className="space-y-2">
+            <AuthField
+              id="password"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              autoComplete="current-password"
+              className="w-full"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <input
+                  id="remember-email"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input bg-background"
+                  checked={rememberEmail}
+                  onChange={(e) => setRememberEmail(e.target.checked)}
+                  disabled={isLoading}
+                />
+                <Label htmlFor="remember-email" className="text-sm font-normal text-muted-foreground">
+                  Remember email
+                </Label>
+              </div>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Password can be saved by your browser
+              </span>
+            </div>
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+      </AuthCard>
+    </main>
   );
 }

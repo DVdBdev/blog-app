@@ -75,72 +75,74 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthCard
-      title="Create an account"
-      description="Enter your details below to create your account"
-      footer={
-        <div className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="underline underline-offset-4 hover:text-primary">
-            Sign in
-          </Link>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <AuthMessage type="error" message={error} />
-        <AuthMessage type="success" message={success} />
-        
-        <AuthField
-          id="username"
-          label="Username"
-          type="text"
-          placeholder="johndoe"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          error={fieldErrors.username}
-          disabled={isLoading || !!success}
-          autoComplete="username"
-        />
+    <main className="page-shell">
+      <AuthCard
+        title="Create an account"
+        description="Enter your details below to create your account"
+        footer={
+          <div className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="underline underline-offset-4 hover:text-primary">
+              Sign in
+            </Link>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4 auth-form-stagger">
+          <AuthMessage type="error" message={error} />
+          <AuthMessage type="success" message={success} />
+          
+          <AuthField
+            id="username"
+            label="Username"
+            type="text"
+            placeholder="johndoe"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            error={fieldErrors.username}
+            disabled={isLoading || !!success}
+            autoComplete="username"
+          />
 
-        <AuthField
-          id="email"
-          label="Email"
-          type="email"
-          placeholder="m@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={fieldErrors.email}
-          disabled={isLoading || !!success}
-          autoComplete="email"
-        />
+          <AuthField
+            id="email"
+            label="Email"
+            type="email"
+            placeholder="m@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={fieldErrors.email}
+            disabled={isLoading || !!success}
+            autoComplete="email"
+          />
 
-        <AuthField
-          id="password"
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={fieldErrors.password}
-          disabled={isLoading || !!success}
-          autoComplete="new-password"
-        />
+          <AuthField
+            id="password"
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
+            disabled={isLoading || !!success}
+            autoComplete="new-password"
+          />
 
-        <AuthField
-          id="confirmPassword"
-          label="Confirm Password"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          error={fieldErrors.confirmPassword}
-          disabled={isLoading || !!success}
-          autoComplete="new-password"
-        />
+          <AuthField
+            id="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            error={fieldErrors.confirmPassword}
+            disabled={isLoading || !!success}
+            autoComplete="new-password"
+          />
 
-        <Button type="submit" className="w-full" disabled={isLoading || !!success}>
-          {isLoading ? "Creating account..." : "Create account"}
-        </Button>
-      </form>
-    </AuthCard>
+          <Button type="submit" className="w-full" disabled={isLoading || !!success}>
+            {isLoading ? "Creating account..." : "Create account"}
+          </Button>
+        </form>
+      </AuthCard>
+    </main>
   );
 }

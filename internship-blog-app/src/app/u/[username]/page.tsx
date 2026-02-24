@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Map } from "lucide-react";
+import { ArrowLeft, BookOpen, Map } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
 } from "@/features/journeys/journeys.public.server";
 import { PublicJourneyList } from "@/features/journeys/components/PublicJourneyList";
 import { ContributionHeatmap } from "@/features/profiles/components/ContributionHeatmap";
+import { ProfileDetailsCard } from "@/features/profiles/components/ProfileDetailsCard";
 import { getDailyPostContributionsByAuthor } from "@/features/posts/posts.server";
 
 interface PublicProfilePageProps {
@@ -71,42 +72,68 @@ async function PublicProfileContent({ username }: { username: string }) {
               <AvatarFallback className="text-xl">{initials}</AvatarFallback>
             </Avatar>
 
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1">
               <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
               <p className="text-sm text-muted-foreground mt-2">
                 {profile.bio || "No bio yet."}
               </p>
             </div>
+
+            <div className="w-full sm:w-auto grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-md border border-border/70 bg-background/35 px-3 py-2">
+                <p className="text-muted-foreground text-xs">Public journeys</p>
+                <p className="font-semibold">{journeys.length}</p>
+              </div>
+              <div className="rounded-md border border-border/70 bg-background/35 px-3 py-2">
+                <p className="text-muted-foreground text-xs">Contributions (1Y)</p>
+                <p className="font-semibold">{contributions.length}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="section-title flex items-center gap-2">
-              <Map className="h-5 w-5" />
-              Public Journeys
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {journeys.length === 0
-                ? "No public journeys shared yet."
-                : `${journeys.length} public journey${journeys.length === 1 ? "" : "s"}`}
-            </p>
-          </div>
-
-          <Button variant="outline" asChild>
-            <Link href={`/u/${profile.username}/journeys`}>View all journeys</Link>
-          </Button>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        <div className="xl:col-span-1">
+          <ProfileDetailsCard profile={profile} />
         </div>
 
-        <PublicJourneyList journeys={featuredJourneys} ownerName={displayName} />
+        <section className="space-y-4 xl:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="section-title flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Public Journeys
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {journeys.length === 0
+                  ? "No public journeys shared yet."
+                  : `${journeys.length} public journey${journeys.length === 1 ? "" : "s"}`}
+              </p>
+            </div>
+
+            <Button variant="outline" asChild>
+              <Link href={`/u/${profile.username}/journeys`}>View all journeys</Link>
+            </Button>
+          </div>
+
+          <PublicJourneyList journeys={featuredJourneys} ownerName={displayName} />
+        </section>
+      </div>
+
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="section-title flex items-center gap-2">
+            <Map className="h-5 w-5" />
+            Public Contribution Activity
+          </h2>
+        </div>
       </section>
 
       <ContributionHeatmap
         contributions={contributions}
-        title="Public Contribution Activity"
+        title="Activity Over Time"
         todayIso={todayIso}
       />
     </div>
@@ -118,6 +145,7 @@ function PublicProfileSkeleton() {
     <div className="space-y-8">
       <Skeleton className="h-8 w-28" />
       <Skeleton className="h-44 w-full rounded-xl" />
+      <Skeleton className="h-72 w-full rounded-xl" />
       <div className="space-y-3">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-5 w-56" />

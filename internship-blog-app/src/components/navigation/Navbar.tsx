@@ -27,7 +27,7 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
     }`;
 
   return (
-    <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 p-4 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70 relative">
+    <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 px-5 py-4 sm:px-6 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70 relative">
       <Link href="/" className="text-xl font-bold text-primary transition-transform duration-200 hover:scale-[1.01] hover:opacity-90">
         Internship Blog App
       </Link>
