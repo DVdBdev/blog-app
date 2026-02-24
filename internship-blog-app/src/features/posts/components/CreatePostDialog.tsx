@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPost, CreatePostData } from "../posts.actions";
 import { PostStatus } from "@/types";
 import {
@@ -31,9 +31,35 @@ interface CreatePostDialogProps {
   journeyId: string;
 }
 
+function normalizeContent(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === "object") return value as Record<string, unknown>;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function countImageNodes(node: unknown): number {
+  if (!node || typeof node !== "object") return 0;
+  const typed = node as { type?: string; content?: unknown[] };
+  const selfCount = typed.type === "image" ? 1 : 0;
+  const children = Array.isArray(typed.content) ? typed.content : [];
+  return selfCount + children.reduce((sum, child) => sum + countImageNodes(child), 0);
+}
+
 export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
   const [open, setOpen] = useState(false);
+  const [editorMountKey, setEditorMountKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -43,11 +69,20 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
     content: {},
     status: "draft",
   });
+  const latestContentRef = useRef<Record<string, unknown>>({});
+  const editorContentGetterRef = useRef<(() => Record<string, unknown>) | null>(null);
 
   useEffect(() => {
     const storedDefaultStatus = getDefaultPostStatus();
     setFormData((prev) => ({ ...prev, status: storedDefaultStatus }));
+    latestContentRef.current = {};
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      setEditorMountKey((prev) => prev + 1);
+    }
+  }, [open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,6 +94,7 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
   };
 
   const handleContentChange = (content: Record<string, unknown>) => {
+    latestContentRef.current = content;
     setFormData((prev: CreatePostData) => ({ ...prev, content }));
   };
 
@@ -69,10 +105,34 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
     setSuccess(false);
 
     try {
-      const result = await createPost(formData);
+      const liveContentNow = editorContentGetterRef.current
+        ? editorContentGetterRef.current()
+        : latestContentRef.current;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const liveContentAfterDelay = editorContentGetterRef.current
+        ? editorContentGetterRef.current()
+        : latestContentRef.current;
+      const contentToSave =
+        countImageNodes(liveContentAfterDelay) >= countImageNodes(liveContentNow)
+          ? liveContentAfterDelay
+          : liveContentNow;
+
+      const payload: CreatePostData = {
+        ...formData,
+        content: contentToSave,
+      };
+
+      const result = await createPost(payload);
       if (result.error) {
         setError(result.error);
       } else {
+        const savedContent = normalizeContent(result.post?.content);
+        if (savedContent) {
+          latestContentRef.current = savedContent;
+          setFormData((prev) => ({ ...prev, content: savedContent }));
+          setEditorMountKey((prev) => prev + 1);
+        }
+
         setSuccess(true);
         setTimeout(() => {
           setOpen(false);
@@ -84,6 +144,7 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
             content: {},
             status: storedDefaultStatus,
           });
+          latestContentRef.current = {};
         }, 1500);
       }
     } catch (err) {
@@ -153,7 +214,15 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
 
           <div className="space-y-2">
             <Label>Content</Label>
-            <RichTextEditor content={formData.content} onChange={handleContentChange} />
+            <RichTextEditor
+              key={editorMountKey}
+              content={formData.content}
+              onChange={handleContentChange}
+              onImageUploadStateChange={setIsUploadingImage}
+              onEditorContentGetterChange={(getter) => {
+                editorContentGetterRef.current = getter;
+              }}
+            />
           </div>
 
           <DialogFooter>
@@ -165,9 +234,9 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.title.trim()}>
+            <Button type="submit" disabled={isLoading || isUploadingImage || !formData.title.trim()}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Post
+              {isUploadingImage ? "Uploading image..." : "Save Post"}
             </Button>
           </DialogFooter>
         </form>

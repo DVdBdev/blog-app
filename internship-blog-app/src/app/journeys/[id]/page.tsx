@@ -75,8 +75,9 @@ async function JourneyContent({ id }: { id: string }) {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
+            <p className="section-kicker w-fit">Journey</p>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{journey.title}</h1>
+              <h1 className="text-3xl font-bold tracking-tight mt-1">{journey.title}</h1>
               {/* Visibility badge is only useful context for the owner */}
               {isOwner && (
                 <Badge
@@ -94,7 +95,7 @@ async function JourneyContent({ id }: { id: string }) {
           </div>
 
           {isOwner && (
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full md:w-auto [&>*]:w-full md:[&>*]:w-auto">
               <EditJourneyDialog journey={journey} />
               <CreatePostDialog journeyId={journey.id} />
             </div>
@@ -103,7 +104,9 @@ async function JourneyContent({ id }: { id: string }) {
       </div>
 
       <div className="space-y-4">
+        <p className="section-kicker w-fit">Timeline</p>
         <h2 className="section-title">Posts</h2>
+        <p className="section-subtitle">Chronological updates from this journey.</p>
         <PostList posts={posts} />
       </div>
     </div>

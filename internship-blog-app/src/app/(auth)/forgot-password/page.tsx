@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
 
       setSuccess("If an account exists with that email, we have sent password reset instructions.");
       setEmail("");
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);

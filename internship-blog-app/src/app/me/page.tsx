@@ -6,7 +6,8 @@ import { ProfileDetailsCard } from "@/features/profiles/components/ProfileDetail
 import { JourneysPreview } from "@/features/profiles/components/JourneysPreview";
 import { ProfileSkeleton } from "@/features/profiles/components/ProfileSkeleton";
 import { ContributionHeatmap } from "@/features/profiles/components/ContributionHeatmap";
-import { getDailyPostContributionsByAuthor } from "@/features/posts/posts.server";
+import { getDailyPostContributionsByAuthor, hasPostsByAuthor } from "@/features/posts/posts.server";
+import { ProfileCompletionCard } from "@/features/profiles/components/ProfileCompletionCard";
 
 export const metadata = {
   title: "My Profile | Internship Blog App",
@@ -20,7 +21,11 @@ async function ProfileContent() {
     redirect("/login");
   }
 
-  const contributions = await getDailyPostContributionsByAuthor(profile.id);
+  const [contributions, hasAtLeastOnePost] = await Promise.all([
+    getDailyPostContributionsByAuthor(profile.id),
+    hasPostsByAuthor(profile.id),
+  ]);
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-8">
@@ -35,7 +40,14 @@ async function ProfileContent() {
         </div>
       </div>
 
-      <ContributionHeatmap contributions={contributions} />
+      <div className="grid gap-8 2xl:grid-cols-3">
+        <div className="2xl:col-span-1">
+          <ProfileCompletionCard profile={profile} hasAtLeastOnePost={hasAtLeastOnePost} />
+        </div>
+        <div className="2xl:col-span-2">
+          <ContributionHeatmap contributions={contributions} todayIso={todayIso} />
+        </div>
+      </div>
     </div>
   );
 }

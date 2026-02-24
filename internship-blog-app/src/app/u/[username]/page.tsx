@@ -44,6 +44,7 @@ async function PublicProfileContent({ username }: { username: string }) {
   const contributions = await getDailyPostContributionsByAuthor(profile.id, {
     publishedOnly: true,
   });
+  const todayIso = new Date().toISOString().slice(0, 10);
   const featuredJourneys = journeys.slice(0, 3);
   const displayName = profile.display_name ?? profile.username;
   const initials = displayName
@@ -106,6 +107,7 @@ async function PublicProfileContent({ username }: { username: string }) {
       <ContributionHeatmap
         contributions={contributions}
         title="Public Contribution Activity"
+        todayIso={todayIso}
       />
     </div>
   );

@@ -122,3 +122,19 @@ export async function getDailyPostContributionsByAuthor(
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+export async function hasPostsByAuthor(authorId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .eq("author_id", authorId);
+
+  if (error) {
+    console.error("Error checking whether author has posts:", error);
+    return false;
+  }
+
+  return (count ?? 0) > 0;
+}

@@ -26,15 +26,19 @@ export async function createPost(data: CreatePostData) {
     return { error: "Title is required" };
   }
 
-  const { error } = await supabase.from("posts").insert([
-    {
-      journey_id: data.journey_id,
-      author_id: user.id,
-      title: data.title.trim(),
-      content: data.content,
-      status: data.status,
-    },
-  ]);
+  const { data: inserted, error } = await supabase
+    .from("posts")
+    .insert([
+      {
+        journey_id: data.journey_id,
+        author_id: user.id,
+        title: data.title.trim(),
+        content: data.content,
+        status: data.status,
+      },
+    ])
+    .select("id,content")
+    .single();
 
   if (error) {
     console.error("Error creating post:", error);
@@ -42,7 +46,7 @@ export async function createPost(data: CreatePostData) {
   }
 
   revalidatePath(`/journeys/${data.journey_id}`);
-  return { success: true };
+  return { success: true, post: inserted };
 }
 
 export interface UpdatePostData {
@@ -67,7 +71,7 @@ export async function updatePost(data: UpdatePostData) {
     return { error: "Title is required" };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("posts")
     .update({
       title: data.title.trim(),
@@ -75,7 +79,9 @@ export async function updatePost(data: UpdatePostData) {
       status: data.status,
     })
     .eq("id", data.id)
-    .eq("author_id", user.id);
+    .eq("author_id", user.id)
+    .select("id,content")
+    .single();
 
   if (error) {
     console.error("Error updating post:", error);
@@ -83,5 +89,5 @@ export async function updatePost(data: UpdatePostData) {
   }
 
   revalidatePath(`/posts/${data.id}`);
-  return { success: true };
+  return { success: true, post: updated };
 }

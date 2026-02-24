@@ -26,7 +26,7 @@ async function PostContent({ id }: { id: string }) {
 
   if (!post) {
     return (
-      <div className="text-center py-16 border rounded-lg bg-muted/20 border-dashed">
+      <div className="empty-state">
         <h2 className="text-2xl font-bold mb-2">Post not found</h2>
         <p className="text-muted-foreground mb-6">
           The post you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
@@ -62,7 +62,8 @@ async function PostContent({ id }: { id: string }) {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
+            <p className="section-kicker w-fit">Post</p>
+            <h1 className="text-3xl font-bold tracking-tight mt-1">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               {/* Status badge is only meaningful / shown to the author */}
               {isAuthor && (

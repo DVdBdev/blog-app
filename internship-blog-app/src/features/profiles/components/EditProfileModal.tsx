@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Profile } from "@/types";
 import { updateProfile, UpdateProfileData } from "../profile.actions";
 import { createBrowserSupabaseClient } from "@/services/supabase/client";
@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Upload, ImagePlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface EditProfileModalProps {
@@ -29,6 +29,7 @@ const PROFILE_PICTURES_BUCKET = "profile-pictures";
 
 export function EditProfileModal({ profile }: EditProfileModalProps) {
   const supabase = createBrowserSupabaseClient();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,14 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
       setSuccess(false);
     }
   }, [open, profile]);
+
+  useEffect(() => {
+    const handleOpenFromCompletion = () => setOpen(true);
+    window.addEventListener("open-edit-profile-modal", handleOpenFromCompletion);
+    return () => {
+      window.removeEventListener("open-edit-profile-modal", handleOpenFromCompletion);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -172,6 +181,21 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
     setRemoveAvatar(false);
+  };
+
+  const triggerAvatarPicker = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const resetLocalAvatarSelection = () => {
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -276,7 +300,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
 
           <div className="space-y-3">
             <Label htmlFor="avatar_upload">Profile Picture</Label>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 rounded-lg border border-border/70 bg-background/40 p-3">
               <Avatar className="h-16 w-16">
                 <AvatarImage
                   src={removeAvatar ? undefined : avatarPreview || formData.avatar_url || undefined}
@@ -284,12 +308,52 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
                 />
                 <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
               </Avatar>
+
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={triggerAvatarPicker}
+                    disabled={isLoading}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {avatarFile ? "Replace file" : "Choose file"}
+                  </Button>
+                  {avatarFile ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isLoading}
+                      onClick={resetLocalAvatarSelection}
+                    >
+                      Clear selection
+                    </Button>
+                  ) : null}
+                </div>
+
+                <p className="truncate text-xs text-muted-foreground">
+                  {avatarFile
+                    ? `Selected: ${avatarFile.name}`
+                    : removeAvatar
+                      ? "Avatar will be removed when you save."
+                      : formData.avatar_url
+                        ? "Current avatar is shown. Choose a new file to replace it."
+                        : "No file selected. PNG, JPG, WEBP, or GIF."}
+                </p>
+              </div>
+
               <Input
+                ref={avatarInputRef}
                 id="avatar_upload"
                 type="file"
                 accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                 onChange={handleAvatarChange}
                 disabled={isLoading}
+                className="hidden"
               />
             </div>
             <div className="flex gap-2">
@@ -297,22 +361,15 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  if (avatarPreview) {
-                    URL.revokeObjectURL(avatarPreview);
-                  }
-                  setAvatarFile(null);
-                  setAvatarPreview(null);
+                  resetLocalAvatarSelection();
                   setRemoveAvatar(true);
                 }}
                 disabled={isLoading || (!formData.avatar_url && !avatarPreview)}
+                className="gap-2"
               >
+                <ImagePlus className="h-4 w-4" />
                 Remove Photo
               </Button>
-              {avatarFile && (
-                <p className="text-xs text-muted-foreground self-center">
-                  New image selected: {avatarFile.name}
-                </p>
-              )}
             </div>
           </div>
 

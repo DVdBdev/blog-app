@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/features/auth/auth.server";
+import { getCurrentProfile } from "@/features/profiles/profile.server";
 import { Navbar } from "@/components/navigation/Navbar";
 import "./globals.css";
 
@@ -19,7 +20,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -27,7 +28,9 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <Navbar user={user} />
+        <Navbar
+          user={user ? { email: user.email ?? undefined, username: profile?.username ?? undefined } : null}
+        />
         {children}
       </body>
     </html>

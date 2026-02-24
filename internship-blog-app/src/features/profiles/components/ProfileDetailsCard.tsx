@@ -37,9 +37,10 @@ export function ProfileDetailsCard({ profile }: ProfileDetailsCardProps) {
   ].filter((detail) => detail.value && detail.value.trim() !== "");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>About</CardTitle>
+    <Card className="surface-card">
+      <CardHeader className="pb-2">
+        <p className="section-kicker w-fit">Profile</p>
+        <CardTitle className="mt-2">About</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {details.length === 0 ? (

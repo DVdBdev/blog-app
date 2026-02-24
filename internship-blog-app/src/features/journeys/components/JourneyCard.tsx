@@ -29,8 +29,8 @@ export function JourneyCard({ journey }: JourneyCardProps) {
   };
 
   return (
-    <Link href={`/journeys/${journey.id}`} className="block h-full transition-transform hover:scale-[1.02]">
-      <Card className="h-full flex flex-col">
+    <Link href={`/journeys/${journey.id}`} className="group block h-full">
+      <Card className="surface-card interactive-card hover:bg-muted/50 h-full flex flex-col">
         <CardHeader>
           <div className="flex justify-between items-start gap-4">
             <CardTitle className="line-clamp-2 text-lg">{journey.title}</CardTitle>
@@ -46,7 +46,7 @@ export function JourneyCard({ journey }: JourneyCardProps) {
           )}
         </CardHeader>
         <CardContent className="flex-grow" />
-        <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t pt-4">
+        <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t border-border/70 pt-4">
           <CalendarDays className="h-4 w-4" />
           <span>Started {formattedDate}</span>
         </CardFooter>

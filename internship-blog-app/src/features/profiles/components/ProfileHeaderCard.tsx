@@ -15,7 +15,7 @@ export function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
     : profile.username.substring(0, 2).toUpperCase();
 
   return (
-    <Card>
+    <Card className="surface-card">
       <CardContent className="p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <Avatar className="h-24 w-24">
@@ -33,7 +33,7 @@ export function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
 
           <div className="flex flex-col w-full sm:w-auto gap-2 mt-4 sm:mt-0">
             <EditProfileModal profile={profile} />
-            <Button variant="secondary" asChild>
+            <Button variant="secondary" asChild className="sm:min-w-[170px]">
               <Link href={`/u/${profile.username}`}>View public profile</Link>
             </Button>
           </div>

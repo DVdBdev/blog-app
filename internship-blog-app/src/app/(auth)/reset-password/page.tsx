@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
       setSuccess("Password updated successfully. You can now log in with your new password.");
       setPassword("");
       setConfirmPassword("");
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);

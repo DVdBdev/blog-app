@@ -74,6 +74,60 @@ export function ProfileSkeleton() {
           </div>
         </div>
       </div>
+
+      <div className="grid gap-8 2xl:grid-cols-3">
+        <div className="2xl:col-span-1">
+          <Card className="surface-card">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-6 w-44" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-2 flex-1 rounded-full" />
+                <Skeleton className="h-4 w-10" />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="rounded-md border border-border/70 p-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4 rounded-full" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-7 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="2xl:col-span-2">
+          <Card className="surface-card">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-44" />
+                </div>
+                <Skeleton className="h-8 w-28" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                ))}
+              </div>
+              <Skeleton className="h-44 w-full rounded-xl" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

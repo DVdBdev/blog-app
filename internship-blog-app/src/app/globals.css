@@ -219,19 +219,116 @@
 
   .surface-card {
     @apply rounded-2xl border bg-card/80 backdrop-blur-sm shadow-sm;
+    transition:
+      border-color 220ms ease,
+      background-color 220ms ease;
     box-shadow: 0 12px 28px -22px rgba(0, 0, 0, 0.4);
+  }
+
+  .interactive-card {
+    transition:
+      transform 220ms ease,
+      border-color 220ms ease,
+      box-shadow 240ms ease,
+      background-color 220ms ease;
+  }
+
+  a:where(.group):hover .interactive-card,
+  a:where(.group):focus-visible .interactive-card {
+    transform: translateY(-3px);
+    border-color: color-mix(in oklab, var(--color-chart-2) 36%, var(--color-border));
+    box-shadow: 0 24px 44px -34px rgba(0, 0, 0, 0.6);
+    background-color: color-mix(in oklab, var(--color-muted) 72%, var(--color-card));
+  }
+
+  .interactive-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in oklab, var(--color-chart-2) 36%, var(--color-border));
+    box-shadow: 0 24px 44px -34px rgba(0, 0, 0, 0.6);
+    background-color: color-mix(in oklab, var(--color-muted) 72%, var(--color-card));
+  }
+
+  .interactive-card:focus-within {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--color-chart-2) 40%, var(--color-border));
+    box-shadow: 0 20px 38px -30px rgba(0, 0, 0, 0.56);
+    background-color: color-mix(in oklab, var(--color-muted) 64%, var(--color-card));
   }
 
   .section-title {
     @apply text-2xl font-semibold tracking-tight;
   }
 
+  .section-kicker {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold tracking-wide uppercase text-muted-foreground bg-background/70;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
   .muted-pill {
     @apply inline-flex items-center rounded-full border px-3 py-1 text-xs text-muted-foreground bg-background/70;
   }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-14 px-5 text-center rounded-xl border border-dashed bg-muted/20;
+  }
+
+  .empty-state-icon {
+    @apply bg-primary/10 p-3 rounded-full mb-3;
+  }
+
+  .timeline-list {
+    @apply relative pl-4;
+  }
+
+  .timeline-list::before {
+    content: "";
+    position: absolute;
+    left: 0.5rem;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 1px;
+    background: color-mix(in oklab, var(--color-border) 80%, transparent);
+  }
+
+  .timeline-item {
+    @apply relative;
+  }
+
+  .timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -0.87rem;
+    top: 1.35rem;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-chart-2) 55%, var(--color-border));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-background) 80%, transparent);
+  }
+
+  .stagger-list > * {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: item-fade-up 420ms ease forwards;
+  }
+
+  .stagger-list > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger-list > *:nth-child(3) { animation-delay: 110ms; }
+  .stagger-list > *:nth-child(4) { animation-delay: 160ms; }
+  .stagger-list > *:nth-child(5) { animation-delay: 210ms; }
 }
 
 @keyframes page-fade-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes item-fade-up {
   to {
     opacity: 1;
     transform: translateY(0);
@@ -242,6 +339,20 @@
   .page-shell > * {
     animation: none;
     opacity: 1;
+    transform: none;
+  }
+
+  .stagger-list > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .interactive-card,
+  .interactive-card:hover,
+  .interactive-card:focus-within,
+  a:where(.group):hover .interactive-card,
+  a:where(.group):focus-visible .interactive-card {
     transform: none;
   }
 }
