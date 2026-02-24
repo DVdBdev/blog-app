@@ -41,6 +41,17 @@ export function RichTextEditor({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const POST_IMAGES_BUCKET = "post-images";
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+  const ALLOWED_MIME_TYPES = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+    "image/avif",
+    "image/heic",
+    "image/heif",
+  ]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -76,11 +87,19 @@ export function RichTextEditor({
     const normalized = message.toLowerCase();
 
     if (normalized.includes("bucket not found")) {
-      return `Storage bucket "${POST_IMAGES_BUCKET}" is missing. Run migration 008_create_post_images_storage.sql.`;
+      return `Storage bucket "${POST_IMAGES_BUCKET}" is missing. Run migrations 008_create_post_images_storage.sql and 009_fix_post_images_storage_policies.sql.`;
     }
 
     if (normalized.includes("row-level security policy")) {
       return `Upload blocked by Supabase Storage policy. Ensure "${POST_IMAGES_BUCKET}" policies allow uploads to your own folder.`;
+    }
+
+    if (normalized.includes("mime type") || normalized.includes("not allowed")) {
+      return "This image format is not allowed by storage settings. Run migration 010_expand_post_images_allowed_types.sql.";
+    }
+
+    if (normalized.includes("file size")) {
+      return "Image is too large. Please use an image under 10MB.";
     }
 
     return message;
@@ -99,6 +118,14 @@ export function RichTextEditor({
     onImageUploadStateChange?.(true);
 
     try {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        throw new Error("Image is too large. Please use an image under 10MB.");
+      }
+
+      if (!ALLOWED_MIME_TYPES.has(file.type)) {
+        throw new Error("Unsupported image format. Use PNG, JPG, WEBP, GIF, AVIF, HEIC, or HEIF.");
+      }
+
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData.user) {
         throw new Error("You must be signed in to upload images.");
@@ -128,11 +155,23 @@ export function RichTextEditor({
         ? signedData.signedUrl
         : publicData.publicUrl;
 
-      editor
+      if (!imageSrc) {
+        throw new Error("Image uploaded, but no URL could be generated to display it.");
+      }
+
+      const inserted = editor
         .chain()
         .focus()
-        .insertContent({ type: "image", attrs: { src: imageSrc } })
+        .insertContent([
+          { type: "paragraph" },
+          { type: "image", attrs: { src: imageSrc } },
+          { type: "paragraph" },
+        ])
         .run();
+
+      if (!inserted) {
+        throw new Error("Image uploaded, but the editor could not insert it at the current cursor position.");
+      }
 
       // Wait one tick so ProseMirror transaction fully commits before we unlock save.
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -153,7 +192,7 @@ export function RichTextEditor({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/avif,image/heic,image/heif"
         onChange={handleImageFileChange}
         className="hidden"
       />
