@@ -75,6 +75,9 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
         ) : (
           <>
             <Button asChild variant="ghost" className="hidden lg:inline-flex transition-transform duration-200 hover:-translate-y-[1px]">
+              <Link href="/about">About</Link>
+            </Button>
+            <Button asChild variant="ghost" className="hidden lg:inline-flex transition-transform duration-200 hover:-translate-y-[1px]">
               <Link href="/login">Login</Link>
             </Button>
             <Button asChild variant="default" className="hidden lg:inline-flex transition-transform duration-200 hover:-translate-y-[1px]">
@@ -138,6 +141,9 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
           </div>
         ) : (
           <div className="space-y-2">
+            <Button asChild variant="ghost" className="w-full justify-start">
+              <Link href="/about" onClick={() => setMobileOpen(false)}>About</Link>
+            </Button>
             <Button asChild variant="ghost" className="w-full justify-start">
               <Link href="/login" onClick={() => setMobileOpen(false)}>Login</Link>
             </Button>
