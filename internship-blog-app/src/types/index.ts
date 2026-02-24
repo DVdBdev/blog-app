@@ -19,6 +19,7 @@ export interface Profile {
 }
 
 export type JourneyVisibility = "public" | "unlisted" | "private";
+export type JourneyStatus = "active" | "completed";
 
 export interface Journey {
   id: string;
@@ -26,6 +27,8 @@ export interface Journey {
   title: string;
   description: string | null;
   visibility: JourneyVisibility;
+  status: JourneyStatus;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }

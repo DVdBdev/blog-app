@@ -54,9 +54,9 @@ async function PostContent({ id }: { id: string }) {
           </Button>
         ) : (
           <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
-            <Link href="/explore">
+            <Link href="/search?type=journeys">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Explore
+              Back to Public Journeys
             </Link>
           </Button>
         )}

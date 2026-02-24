@@ -67,9 +67,9 @@ async function JourneyContent({ id }: { id: string }) {
               Back to My Journeys
             </Link>
           ) : (
-            <Link href="/explore">
+            <Link href="/search?type=journeys">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Explore
+              Back to Public Journeys
             </Link>
           )}
         </Button>

@@ -10,11 +10,13 @@ interface JourneyCardProps {
 }
 
 export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
-  const formattedDate = new Date(journey.created_at).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const status = journey.status ?? "active";
+  const completedAt = journey.completed_at ? new Date(journey.completed_at) : null;
+  const startedAt = new Date(journey.created_at);
+  const dateRangeLabel =
+    status === "completed" && completedAt
+      ? `${startedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${completedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+      : `Since ${startedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
   const getVisibilityIcon = () => {
     switch (journey.visibility) {
@@ -35,10 +37,18 @@ export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
         <CardHeader>
           <div className="flex justify-between items-start gap-4">
             <CardTitle className="line-clamp-2 text-lg">{journey.title}</CardTitle>
-            <Badge variant="secondary" className="capitalize flex items-center whitespace-nowrap">
-              {getVisibilityIcon()}
-              {journey.visibility}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={status === "completed" ? "default" : "secondary"}
+                className="capitalize whitespace-nowrap"
+              >
+                {status}
+              </Badge>
+              <Badge variant="secondary" className="capitalize flex items-center whitespace-nowrap">
+                {getVisibilityIcon()}
+                {journey.visibility}
+              </Badge>
+            </div>
           </div>
           {journey.description && (
             <CardDescription className="line-clamp-3 mt-2">
@@ -56,7 +66,7 @@ export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
         </CardContent>
         <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t border-border/70 pt-4">
           <CalendarDays className="h-4 w-4" />
-          <span>Started {formattedDate}</span>
+          <span>{dateRangeLabel}</span>
         </CardFooter>
       </Card>
     </Link>

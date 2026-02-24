@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Journey, JourneyVisibility } from "@/types";
+import { Journey, JourneyStatus, JourneyVisibility } from "@/types";
 import { updateJourney, UpdateJourneyData } from "../journeys.actions";
 import {
   Dialog,
@@ -41,6 +41,8 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
     title: journey.title,
     description: journey.description || "",
     visibility: journey.visibility,
+    status: journey.status ?? "active",
+    completed_at: journey.completed_at ?? null,
   });
 
   const handleChange = (
@@ -52,6 +54,17 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
 
   const handleVisibilityChange = (value: JourneyVisibility) => {
     setFormData((prev: UpdateJourneyData) => ({ ...prev, visibility: value }));
+  };
+
+  const handleStatusChange = (value: JourneyStatus) => {
+    setFormData((prev: UpdateJourneyData) => ({
+      ...prev,
+      status: value,
+      completed_at:
+        value === "completed"
+          ? (prev.completed_at ?? new Date().toISOString())
+          : null,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,6 +156,22 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
                 <SelectItem value="public">Public (Visible to everyone)</SelectItem>
                 <SelectItem value="unlisted">Unlisted (Anyone with the link)</SelectItem>
                 <SelectItem value="private">Private (Only you)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Journey status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>

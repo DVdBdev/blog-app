@@ -2,7 +2,7 @@
 
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
-import { JourneyVisibility } from "@/types";
+import { JourneyStatus, JourneyVisibility } from "@/types";
 
 export interface CreateJourneyData {
   title: string;
@@ -31,6 +31,8 @@ export async function createJourney(data: CreateJourneyData) {
       title: data.title.trim(),
       description: data.description?.trim() || null,
       visibility: data.visibility,
+      status: "active",
+      completed_at: null,
     },
   ]);
 
@@ -48,6 +50,8 @@ export interface UpdateJourneyData {
   title: string;
   description?: string;
   visibility: JourneyVisibility;
+  status: JourneyStatus;
+  completed_at?: string | null;
 }
 
 export async function updateJourney(data: UpdateJourneyData) {
@@ -71,6 +75,8 @@ export async function updateJourney(data: UpdateJourneyData) {
       title: data.title.trim(),
       description: data.description?.trim() || null,
       visibility: data.visibility,
+      status: data.status,
+      completed_at: data.status === "completed" ? (data.completed_at ?? new Date().toISOString()) : null,
     })
     .eq("id", data.id)
     .eq("owner_id", user.id);
