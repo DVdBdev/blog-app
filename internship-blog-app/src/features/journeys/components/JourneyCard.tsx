@@ -1,14 +1,15 @@
 import { Journey } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Globe, Lock, Link as LinkIcon } from "lucide-react";
+import { CalendarDays, Globe, Lock, Link as LinkIcon, UserRound } from "lucide-react";
 import Link from "next/link";
 
 interface JourneyCardProps {
   journey: Journey;
+  ownerName?: string | null;
 }
 
-export function JourneyCard({ journey }: JourneyCardProps) {
+export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
   const formattedDate = new Date(journey.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -45,7 +46,14 @@ export function JourneyCard({ journey }: JourneyCardProps) {
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="flex-grow" />
+        <CardContent className="flex-grow">
+          {ownerName ? (
+            <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+              <UserRound className="h-4 w-4" />
+              By {ownerName}
+            </p>
+          ) : null}
+        </CardContent>
         <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t border-border/70 pt-4">
           <CalendarDays className="h-4 w-4" />
           <span>Started {formattedDate}</span>

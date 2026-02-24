@@ -46,10 +46,18 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
     .from("journeys")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
+    // "No rows" after delete should be treated as a normal not-found case.
+    if (error.code === "PGRST116") {
+      return { journey: null, currentUserId };
+    }
     console.error("Error fetching journey:", error);
+    return { journey: null, currentUserId };
+  }
+
+  if (!journey) {
     return { journey: null, currentUserId };
   }
 
