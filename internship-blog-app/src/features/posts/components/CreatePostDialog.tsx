@@ -51,8 +51,8 @@ function countImageNodes(node: unknown): number {
   if (!node || typeof node !== "object") return 0;
   const typed = node as { type?: string; content?: unknown[] };
   const selfCount = typed.type === "image" ? 1 : 0;
-  const children = Array.isArray(typed.content) ? typed.content : [];
-  return selfCount + children.reduce((sum, child) => sum + countImageNodes(child), 0);
+  const children: unknown[] = Array.isArray(typed.content) ? typed.content : [];
+  return selfCount + children.reduce<number>((sum, child) => sum + countImageNodes(child), 0);
 }
 
 export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
