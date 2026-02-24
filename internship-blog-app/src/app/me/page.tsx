@@ -28,10 +28,10 @@ async function ProfileContent() {
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <ProfileHeaderCard profile={profile} />
 
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-6 sm:gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
           <ProfileDetailsCard profile={profile} />
         </div>
@@ -40,7 +40,7 @@ async function ProfileContent() {
         </div>
       </div>
 
-      <div className="grid gap-8 2xl:grid-cols-3">
+      <div className="grid gap-6 sm:gap-8 2xl:grid-cols-3">
         <div className="2xl:col-span-1">
           <ProfileCompletionCard profile={profile} hasAtLeastOnePost={hasAtLeastOnePost} />
         </div>
@@ -54,7 +54,7 @@ async function ProfileContent() {
 
 export default function MyProfilePage() {
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-6xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl">
       <Suspense fallback={<ProfileSkeleton />}>
         <ProfileContent />
       </Suspense>

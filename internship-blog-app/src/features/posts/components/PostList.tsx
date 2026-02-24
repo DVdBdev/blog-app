@@ -29,7 +29,7 @@ export function PostList({ posts }: PostListProps) {
         <Link key={post.id} href={`/posts/${post.id}`} className="group block">
           <Card className="surface-card interactive-card hover:bg-muted/50 timeline-item">
             <CardHeader className="pb-3">
-              <div className="flex justify-between items-start gap-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 sm:gap-4">
                 <CardTitle className="text-lg">{post.title}</CardTitle>
                 <Badge variant={post.status === "published" ? "default" : "secondary"} className="capitalize">
                   {post.status}

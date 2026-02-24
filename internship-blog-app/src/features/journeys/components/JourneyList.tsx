@@ -24,7 +24,7 @@ export function JourneyList({ journeys }: JourneyListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-list">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 stagger-list">
       {journeys.map((journey) => (
         <JourneyCard key={journey.id} journey={journey} />
       ))}

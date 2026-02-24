@@ -122,6 +122,7 @@
     @apply text-foreground;
     position: relative;
     min-height: 100vh;
+    overflow-x: hidden;
     background: var(--color-background);
   }
 
@@ -250,7 +251,7 @@
   }
 
   .section-title {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-xl sm:text-2xl font-semibold tracking-tight;
   }
 
   .section-kicker {
@@ -266,7 +267,7 @@
   }
 
   .empty-state {
-    @apply flex flex-col items-center justify-center py-14 px-5 text-center rounded-xl border border-dashed bg-muted/20;
+    @apply flex flex-col items-center justify-center py-10 sm:py-14 px-5 text-center rounded-xl border border-dashed bg-muted/20;
   }
 
   .empty-state-icon {

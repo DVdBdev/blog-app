@@ -121,9 +121,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   });
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-5xl">
       <div className="space-y-6">
-        <section className="surface-card p-6 space-y-4">
+        <section className="surface-card p-4 sm:p-6 space-y-4">
           <div>
             <p className="muted-pill mb-3">Explore</p>
             <h1 className="section-title">Search</h1>
@@ -149,14 +149,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <select
               name="sort"
               defaultValue={sort}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 w-full md:w-auto rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="relevance">Relevance</option>
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
             </select>
 
-            <Button type="submit" className="h-10">
+            <Button type="submit" className="h-10 w-full md:w-auto">
               Search
             </Button>
           </form>

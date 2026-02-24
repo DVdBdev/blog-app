@@ -241,12 +241,12 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2 w-full sm:w-auto">
           <Pencil className="h-4 w-4" />
           Edit Profile
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-0.75rem)] sm:w-full sm:max-w-[600px] max-h-[92dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
@@ -254,7 +254,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 py-1 sm:py-4">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -300,7 +300,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
 
           <div className="space-y-3">
             <Label htmlFor="avatar_upload">Profile Picture</Label>
-            <div className="flex items-center gap-4 rounded-lg border border-border/70 bg-card/80 p-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-lg border border-border/70 bg-card/80 p-3">
               <Avatar className="h-16 w-16">
                 <AvatarImage
                   src={removeAvatar ? undefined : avatarPreview || formData.avatar_url || undefined}
@@ -310,14 +310,14 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
               </Avatar>
 
               <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={triggerAvatarPicker}
                     disabled={isLoading}
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto"
                   >
                     <Upload className="h-4 w-4" />
                     {avatarFile ? "Replace file" : "Choose file"}
@@ -329,13 +329,14 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
                       size="sm"
                       disabled={isLoading}
                       onClick={resetLocalAvatarSelection}
+                      className="w-full sm:w-auto"
                     >
                       Clear selection
                     </Button>
                   ) : null}
                 </div>
 
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground break-words">
                   {avatarFile
                     ? `Selected: ${avatarFile.name}`
                     : removeAvatar
@@ -365,7 +366,7 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
                   setRemoveAvatar(true);
                 }}
                 disabled={isLoading || (!formData.avatar_url && !avatarPreview)}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 <ImagePlus className="h-4 w-4" />
                 Remove Photo
@@ -496,10 +497,11 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save changes
             </Button>

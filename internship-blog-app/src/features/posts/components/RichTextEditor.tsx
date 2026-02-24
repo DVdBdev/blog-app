@@ -69,7 +69,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[300px] p-4 border rounded-md mt-2",
+          "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[220px] sm:min-h-[300px] p-4 border rounded-md mt-2",
       },
     },
   });

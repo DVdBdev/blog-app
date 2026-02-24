@@ -44,7 +44,7 @@ async function PostContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      <div className="surface-card p-6">
+      <div className="surface-card p-4 sm:p-6">
         {isAuthor ? (
           <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
             <Link href={`/journeys/${post.journey_id}`}>
@@ -64,7 +64,7 @@ async function PostContent({ id }: { id: string }) {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
             <p className="section-kicker w-fit">Post</p>
-            <h1 className="text-3xl font-bold tracking-tight mt-1">{post.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               {/* Status badge is only meaningful / shown to the author */}
               {isAuthor && (
@@ -106,7 +106,7 @@ async function PostContent({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="surface-card p-6 min-h-[300px]">
+      <div className="surface-card p-4 sm:p-6 min-h-[300px]">
         <RichTextRenderer content={post.content} />
       </div>
     </div>
@@ -135,7 +135,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const { id } = await params;
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-4xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-4xl">
       <Suspense fallback={<PostSkeleton />}>
         <PostContent id={id} />
       </Suspense>

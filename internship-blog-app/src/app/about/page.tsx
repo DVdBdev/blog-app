@@ -42,8 +42,8 @@ const sectionPlaceholders = [
 
 export default function AboutPage() {
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
-      <section className="surface-card p-6 sm:p-8">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-5xl">
+      <section className="surface-card p-4 sm:p-8">
         <p className="section-kicker">About This Project</p>
         <h1 className="section-title mt-3">Team Workspace Notes</h1>
         <p className="section-subtitle max-w-2xl">

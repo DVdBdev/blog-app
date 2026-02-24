@@ -44,8 +44,8 @@ export default async function Home() {
   const viewAllHref = user ? "/journeys" : "/search?type=journeys";
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-6xl space-y-6">
-      <section className="surface-card p-6 md:p-8">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl space-y-6">
+      <section className="surface-card p-4 sm:p-6 md:p-8">
         <p className="section-kicker w-fit">Journeys Showcase</p>
         <h1 className="section-title mt-3">Follow the makers and their journeys</h1>
         <p className="section-subtitle max-w-3xl">

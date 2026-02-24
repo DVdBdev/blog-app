@@ -16,15 +16,15 @@ export function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
 
   return (
     <Card className="surface-card">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <Avatar className="h-24 w-24">
+          <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
             <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
             <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
           </Avatar>
           
           <div className="flex-1 space-y-1 text-center sm:text-left">
-            <h1 className="text-2xl font-bold">{profile.display_name || profile.username}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">{profile.display_name || profile.username}</h1>
             <p className="text-muted-foreground">@{profile.username}</p>
             <p className="mt-2 text-sm max-w-2xl">
               {profile.bio || <span className="italic text-muted-foreground">Add a bio</span>}
@@ -33,7 +33,7 @@ export function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
 
           <div className="flex flex-col w-full sm:w-auto gap-2 mt-4 sm:mt-0">
             <EditProfileModal profile={profile} />
-            <Button variant="secondary" asChild className="sm:min-w-[170px]">
+            <Button variant="secondary" asChild className="w-full sm:w-auto sm:min-w-[170px]">
               <Link href={`/u/${profile.username}`}>View public profile</Link>
             </Button>
           </div>

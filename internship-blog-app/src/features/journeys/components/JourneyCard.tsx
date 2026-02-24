@@ -35,9 +35,9 @@ export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
     <Link href={`/journeys/${journey.id}`} className="group block h-full">
       <Card className="surface-card interactive-card hover:bg-muted/50 h-full flex flex-col">
         <CardHeader>
-          <div className="flex justify-between items-start gap-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 sm:gap-4">
             <CardTitle className="line-clamp-2 text-lg">{journey.title}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant={status === "completed" ? "default" : "secondary"}
                 className="capitalize whitespace-nowrap"

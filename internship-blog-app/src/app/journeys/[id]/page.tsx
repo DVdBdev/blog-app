@@ -54,7 +54,7 @@ async function JourneyContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      <div className="surface-card p-6">
+      <div className="surface-card p-4 sm:p-6">
         <Button
           variant="ghost"
           size="sm"
@@ -78,7 +78,7 @@ async function JourneyContent({ id }: { id: string }) {
           <div className="space-y-2">
             <p className="section-kicker w-fit">Journey</p>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight mt-1">{journey.title}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">{journey.title}</h1>
               {/* Visibility badge is only useful context for the owner */}
               {isOwner && (
                 <Badge
@@ -153,7 +153,7 @@ export default async function JourneyPage({ params }: JourneyPageProps) {
   const { id } = await params;
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-4xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-4xl">
       <Suspense fallback={<JourneySkeleton />}>
         <JourneyContent id={id} />
       </Suspense>

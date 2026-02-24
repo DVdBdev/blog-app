@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-5xl">
       <div className="space-y-6">
         <section className="surface-card p-6 space-y-4">
           <div className="space-y-3">

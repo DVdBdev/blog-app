@@ -65,7 +65,7 @@ async function PublicProfileContent({ username }: { username: string }) {
       </Button>
 
       <Card className="surface-card">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <Avatar className="h-20 w-20">
               <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
@@ -73,7 +73,7 @@ async function PublicProfileContent({ username }: { username: string }) {
             </Avatar>
 
             <div className="space-y-1 flex-1">
-              <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{displayName}</h1>
               <p className="text-sm text-muted-foreground">@{profile.username}</p>
               <p className="text-sm text-muted-foreground mt-2">
                 {profile.bio || "No bio yet."}
@@ -113,7 +113,7 @@ async function PublicProfileContent({ username }: { username: string }) {
               </p>
             </div>
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="w-full sm:w-auto">
               <Link href={`/u/${profile.username}/journeys`}>View all journeys</Link>
             </Button>
           </div>
@@ -228,7 +228,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const { username } = await params;
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-5xl">
       <Suspense fallback={<PublicProfileSkeleton />}>
         <PublicProfileContent username={username} />
       </Suspense>

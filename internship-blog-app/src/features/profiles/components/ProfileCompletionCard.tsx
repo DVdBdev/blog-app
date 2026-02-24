@@ -101,9 +101,9 @@ export function ProfileCompletionCard({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-            <div className="flex items-start gap-2">
+            <div className="flex min-w-0 items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-              <p className="text-sm text-foreground">
+              <p className="min-w-0 text-sm text-foreground break-words">
                 Nice work. Your profile is fully set up and ready for visitors.
               </p>
             </div>
@@ -139,17 +139,17 @@ export function ProfileCompletionCard({
             <p className="text-xs font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
               Next Best Action
             </p>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-medium">{nextTask.label}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{nextTask.description}</p>
               </div>
               {nextTask.actionType === "open-editor" ? (
-                <Button variant="outline" size="sm" onClick={openEditor}>
+                <Button variant="outline" size="sm" onClick={openEditor} className="w-full sm:w-auto">
                   {nextTask.actionLabel}
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                   <Link href={nextTask.actionHref ?? "/journeys"}>{nextTask.actionLabel}</Link>
                 </Button>
               )}
@@ -163,7 +163,7 @@ export function ProfileCompletionCard({
               key={task.id}
               className="rounded-md border border-border/70 bg-card/80 px-3 py-2"
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                   {task.completed ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
@@ -183,13 +183,13 @@ export function ProfileCompletionCard({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-xs shrink-0"
+                      className="h-8 sm:h-7 px-2 text-xs shrink-0 w-full sm:w-auto"
                       onClick={openEditor}
                     >
                       {task.actionLabel}
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm" asChild className="h-7 px-2 text-xs shrink-0">
+                    <Button variant="outline" size="sm" asChild className="h-8 sm:h-7 px-2 text-xs shrink-0 w-full sm:w-auto">
                       <Link href={task.actionHref ?? "/journeys"}>{task.actionLabel}</Link>
                     </Button>
                   )

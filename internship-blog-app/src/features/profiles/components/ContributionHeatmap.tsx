@@ -135,7 +135,7 @@ export function ContributionHeatmap({
     };
   }, [contributions, timeframeDays, todayIso]);
 
-  const chartWidth = Math.max(weeklyTotals.length * 18, 680);
+  const chartWidth = Math.max(weeklyTotals.length * 12, 360);
   const chartHeight = 180;
   const paddingX = 8;
   const paddingTop = 12;
@@ -228,9 +228,9 @@ export function ContributionHeatmap({
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[680px] space-y-2">
+          <div className="min-w-[360px] sm:min-w-[680px] space-y-2">
             <div
-              className="grid gap-1"
+              className="hidden sm:grid gap-1"
               style={{ gridTemplateColumns: `repeat(${weeklyTotals.length}, minmax(0, 1fr))` }}
             >
               {monthTicks.map((label, idx) => (

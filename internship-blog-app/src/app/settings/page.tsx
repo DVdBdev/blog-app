@@ -15,9 +15,9 @@ export default async function SettingsPage() {
   }
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-4xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-4xl">
       <div className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
           Personalize your experience and configure your default publishing behavior.
         </p>

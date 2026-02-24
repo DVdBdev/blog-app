@@ -61,13 +61,13 @@ async function UserJourneysContent({ username }: { username: string }) {
       </Button>
 
       {/* Author header */}
-      <div className="surface-card p-5 flex items-center gap-4">
+      <div className="surface-card p-4 sm:p-5 flex items-center gap-4">
         <Avatar className="h-14 w-14">
           <AvatarImage src={profile.avatar_url || undefined} alt={profile.username} />
           <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{displayName}</h1>
           <p className="text-sm text-muted-foreground">@{profile.username}</p>
         </div>
       </div>
@@ -115,7 +115,7 @@ export default async function UserJourneysPage({ params }: UserJourneysPageProps
   const { username } = await params;
 
   return (
-    <main className="page-shell container mx-auto py-8 px-4 max-w-5xl">
+    <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-5xl">
       <Suspense fallback={<UserJourneysSkeleton />}>
         <UserJourneysContent username={username} />
       </Suspense>

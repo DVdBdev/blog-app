@@ -9,13 +9,13 @@ export async function JourneysPreview() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <p className="section-kicker">Workspace</p>
           <h2 className="section-title mt-2">Your Journeys</h2>
           <p className="section-subtitle">Your latest journeys and where to continue writing.</p>
         </div>
-        <Button variant="ghost" asChild className="h-9">
+        <Button variant="ghost" asChild className="h-9 w-full sm:w-auto justify-center sm:justify-start">
           <Link href="/journeys">View all journeys</Link>
         </Button>
       </div>

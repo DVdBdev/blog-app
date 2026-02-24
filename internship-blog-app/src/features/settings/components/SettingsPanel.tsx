@@ -144,20 +144,20 @@ export function SettingsPanel({ profile }: SettingsPanelProps) {
           <div className="text-sm text-muted-foreground">
             Signed in as <span className="font-medium text-foreground">{profile.email}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
             <EditProfileModal profile={profile} />
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="w-full sm:w-auto">
               <Link href="/reset-password">Change password</Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="w-full sm:w-auto">
               <Link href={`/u/${profile.username}`}>View public profile</Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave}>Save Settings</Button>
+      <div className="flex justify-stretch sm:justify-end">
+        <Button onClick={handleSave} className="w-full sm:w-auto">Save Settings</Button>
       </div>
     </div>
   );

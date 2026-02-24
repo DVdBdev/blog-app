@@ -7,11 +7,15 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { UserStatusChip } from "@/components/navigation/UserStatusChip";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function Navbar({ user }: { user: { email?: string; username?: string } | null }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const navLinkClass = (href: string) =>
     `relative text-sm font-medium transition-all duration-200 hover:text-foreground hover:-translate-y-[1px] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:rounded-full after:bg-primary after:transition-all after:duration-200 ${
@@ -28,8 +32,9 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
 
   return (
     <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 px-5 py-4 sm:px-6 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70 relative">
-      <Link href="/" className="text-xl font-bold text-primary transition-transform duration-200 hover:scale-[1.01] hover:opacity-90">
-        Internship Blog App
+      <Link href="/" className="min-w-0 text-xl font-bold text-primary transition-transform duration-200 hover:scale-[1.01] hover:opacity-90">
+        <span className="hidden sm:inline">Internship Blog App</span>
+        <span className="sm:hidden">Blog App</span>
       </Link>
 
       <div className="flex items-center gap-2 sm:gap-3">
