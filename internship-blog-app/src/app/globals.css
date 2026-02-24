@@ -187,12 +187,12 @@
   .theme-transition *::before,
   .theme-transition *::after {
     transition:
-      background-color 280ms ease,
-      border-color 280ms ease,
-      color 220ms ease,
-      fill 220ms ease,
-      stroke 220ms ease,
-      box-shadow 280ms ease;
+      background-color 420ms ease,
+      border-color 420ms ease,
+      color 340ms ease,
+      fill 340ms ease,
+      stroke 340ms ease,
+      box-shadow 420ms ease;
   }
 
   .page-shell {
