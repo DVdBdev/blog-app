@@ -143,18 +143,83 @@ async function PublicProfileContent({ username }: { username: string }) {
 function PublicProfileSkeleton() {
   return (
     <div className="space-y-8">
-      <Skeleton className="h-8 w-28" />
-      <Skeleton className="h-44 w-full rounded-xl" />
-      <Skeleton className="h-72 w-full rounded-xl" />
-      <div className="space-y-3">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-5 w-56" />
+      <Skeleton className="h-8 w-32" />
+
+      <Card className="surface-card">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <Skeleton className="h-20 w-20 rounded-full" />
+
+            <div className="space-y-2 flex-1 w-full">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-full max-w-2xl mt-2" />
+            </div>
+
+            <div className="w-full sm:w-auto grid grid-cols-2 gap-2">
+              <Skeleton className="h-16 w-full sm:w-32 rounded-md" />
+              <Skeleton className="h-16 w-full sm:w-32 rounded-md" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        <div className="xl:col-span-1">
+          <Card className="surface-card">
+            <CardContent className="p-6 space-y-4">
+              <Skeleton className="h-6 w-28" />
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <section className="space-y-4 xl:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-44" />
+            </div>
+            <Skeleton className="h-10 w-36" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="surface-card">
+                <CardContent className="p-4 space-y-3">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-48 w-full rounded-xl" />
-        ))}
-      </div>
+
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+        </div>
+      </section>
+
+      <Card className="surface-card">
+        <CardContent className="p-6 space-y-4">
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <div className="grid grid-cols-7 gap-2">
+            {[...Array(14)].map((_, i) => (
+              <Skeleton key={i} className="h-6 w-full rounded-sm" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
