@@ -41,7 +41,7 @@ function getVisibilityIcon(visibility: string) {
 }
 
 async function JourneyContent({ id }: { id: string }) {
-  const { journey, currentUserId, ownerName } = await getJourneyById(id);
+  const { journey, currentUserId, ownerName, ownerUsername } = await getJourneyById(id);
 
   if (!journey) {
     notFound();
@@ -94,10 +94,20 @@ async function JourneyContent({ id }: { id: string }) {
             {journey.description && (
               <p className="text-muted-foreground max-w-3xl">{journey.description}</p>
             )}
-            <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
-              <UserRound className="h-4 w-4" />
-              By {displayOwnerName}
-            </p>
+            {ownerUsername ? (
+              <Link
+                href={`/u/${ownerUsername}`}
+                className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <UserRound className="h-4 w-4" />
+                By {displayOwnerName}
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+                <UserRound className="h-4 w-4" />
+                By {displayOwnerName}
+              </p>
+            )}
           </div>
 
           {isOwner && (

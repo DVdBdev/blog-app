@@ -75,12 +75,22 @@ async function PostContent({ id }: { id: string }) {
                   {post.status}
                 </Badge>
               )}
-              {/* Author name shown to non-author viewers */}
+              {/* Author name shown to non-author viewers — links to their public profile */}
               {!isAuthor && authorName && (
-                <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  <span>{authorName}</span>
-                </div>
+                post.profiles?.username ? (
+                  <Link
+                    href={`/u/${post.profiles.username}`}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>{authorName}</span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    <span>{authorName}</span>
+                  </div>
+                )
               )}
               <div className="flex items-center gap-1">
                 <CalendarDays className="h-4 w-4" />

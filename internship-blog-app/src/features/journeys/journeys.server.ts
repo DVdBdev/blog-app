@@ -7,6 +7,8 @@ export interface JourneyViewResult {
   currentUserId: string | null;
   /** Journey owner's preferred display name, when available. */
   ownerName: string | null;
+  /** Journey owner's username (used to build /u/[username] links). */
+  ownerUsername: string | null;
 }
 
 export async function getMyJourneys(): Promise<Journey[]> {
@@ -53,24 +55,25 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   if (error) {
     // "No rows" after delete should be treated as a normal not-found case.
     if (error.code === "PGRST116") {
-      return { journey: null, currentUserId, ownerName: null };
+      return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
     }
     console.error("Error fetching journey:", error);
-    return { journey: null, currentUserId, ownerName: null };
+    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
   }
 
   if (!journey) {
-    return { journey: null, currentUserId, ownerName: null };
+    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
   }
 
   const typedJourney = journey as Journey;
 
   // Deny access to private journeys for non-owners (defence-in-depth; RLS handles it too).
   if (typedJourney.visibility === "private" && currentUserId !== typedJourney.owner_id) {
-    return { journey: null, currentUserId, ownerName: null };
+    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
   }
 
   let ownerName: string | null = null;
+  let ownerUsername: string | null = null;
   const { data: owner, error: ownerError } = await supabase
     .from("profiles")
     .select("display_name,username")
@@ -80,8 +83,9 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   if (ownerError) {
     console.error("Error fetching journey owner:", ownerError);
   } else if (owner) {
-    ownerName = (owner.display_name as string | null) ?? (owner.username as string | null) ?? null;
+    ownerUsername = (owner.username as string | null) ?? null;
+    ownerName = (owner.display_name as string | null) ?? ownerUsername ?? null;
   }
 
-  return { journey: typedJourney, currentUserId, ownerName };
+  return { journey: typedJourney, currentUserId, ownerName, ownerUsername };
 }
