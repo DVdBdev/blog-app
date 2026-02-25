@@ -5,6 +5,8 @@ export interface JourneyViewResult {
   journey: Journey | null;
   /** The authenticated user's id, or null if unauthenticated. */
   currentUserId: string | null;
+  /** Journey owner's preferred display name, when available. */
+  ownerName: string | null;
 }
 
 export async function getMyJourneys(): Promise<Journey[]> {
@@ -51,22 +53,35 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   if (error) {
     // "No rows" after delete should be treated as a normal not-found case.
     if (error.code === "PGRST116") {
-      return { journey: null, currentUserId };
+      return { journey: null, currentUserId, ownerName: null };
     }
     console.error("Error fetching journey:", error);
-    return { journey: null, currentUserId };
+    return { journey: null, currentUserId, ownerName: null };
   }
 
   if (!journey) {
-    return { journey: null, currentUserId };
+    return { journey: null, currentUserId, ownerName: null };
   }
 
   const typedJourney = journey as Journey;
 
   // Deny access to private journeys for non-owners (defence-in-depth; RLS handles it too).
   if (typedJourney.visibility === "private" && currentUserId !== typedJourney.owner_id) {
-    return { journey: null, currentUserId };
+    return { journey: null, currentUserId, ownerName: null };
   }
 
-  return { journey: typedJourney, currentUserId };
+  let ownerName: string | null = null;
+  const { data: owner, error: ownerError } = await supabase
+    .from("profiles")
+    .select("display_name,username")
+    .eq("id", typedJourney.owner_id)
+    .maybeSingle();
+
+  if (ownerError) {
+    console.error("Error fetching journey owner:", ownerError);
+  } else if (owner) {
+    ownerName = (owner.display_name as string | null) ?? (owner.username as string | null) ?? null;
+  }
+
+  return { journey: typedJourney, currentUserId, ownerName };
 }

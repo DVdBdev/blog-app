@@ -9,7 +9,7 @@ import { PostList } from "@/features/posts/components/PostList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, Lock, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Globe, Lock, Link as LinkIcon, ArrowLeft, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -41,13 +41,14 @@ function getVisibilityIcon(visibility: string) {
 }
 
 async function JourneyContent({ id }: { id: string }) {
-  const { journey, currentUserId } = await getJourneyById(id);
+  const { journey, currentUserId, ownerName } = await getJourneyById(id);
 
   if (!journey) {
     notFound();
   }
 
   const isOwner = !!currentUserId && currentUserId === journey.owner_id;
+  const displayOwnerName = ownerName ?? "Unknown writer";
 
   // Owners see all posts; public viewers only see published posts.
   const posts = await getPostsByJourneyId(id, { publishedOnly: !isOwner });
@@ -93,6 +94,10 @@ async function JourneyContent({ id }: { id: string }) {
             {journey.description && (
               <p className="text-muted-foreground max-w-3xl">{journey.description}</p>
             )}
+            <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+              <UserRound className="h-4 w-4" />
+              By {displayOwnerName}
+            </p>
           </div>
 
           {isOwner && (
