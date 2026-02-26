@@ -21,7 +21,7 @@ export default async function Home() {
 
   const journeys = (data ?? []) as Journey[];
   const ownerIds = Array.from(new Set(journeys.map((journey) => journey.owner_id)));
-  let ownerNameById = new Map<string, string>();
+  let ownerById = new Map<string, { name: string; username: string | null }>();
 
   if (ownerIds.length > 0) {
     const { data: owners, error: ownersError } = await supabase
@@ -32,10 +32,16 @@ export default async function Home() {
     if (ownersError) {
       console.error("Error fetching journey owners for home:", ownersError);
     } else {
-      ownerNameById = new Map(
+      ownerById = new Map(
         (owners ?? []).map((owner) => [
           owner.id as string,
-          ((owner.display_name as string | null) ?? (owner.username as string | null) ?? "Unknown writer"),
+          {
+            name:
+              ((owner.display_name as string | null) ??
+                (owner.username as string | null) ??
+                "Unknown writer"),
+            username: (owner.username as string | null) ?? null,
+          },
         ]),
       );
     }
@@ -73,7 +79,8 @@ export default async function Home() {
               <JourneyCard
                 key={journey.id}
                 journey={journey}
-                ownerName={ownerNameById.get(journey.owner_id) ?? null}
+                ownerName={ownerById.get(journey.owner_id)?.name ?? null}
+                ownerUsername={ownerById.get(journey.owner_id)?.username ?? null}
               />
             ))}
           </div>

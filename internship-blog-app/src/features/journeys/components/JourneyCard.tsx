@@ -7,9 +7,10 @@ import Link from "next/link";
 interface JourneyCardProps {
   journey: Journey;
   ownerName?: string | null;
+  ownerUsername?: string | null;
 }
 
-export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
+export function JourneyCard({ journey, ownerName, ownerUsername }: JourneyCardProps) {
   const status = journey.status ?? "active";
   const completedAt = journey.completed_at ? new Date(journey.completed_at) : null;
   const startedAt = new Date(journey.created_at);
@@ -32,43 +33,56 @@ export function JourneyCard({ journey, ownerName }: JourneyCardProps) {
   };
 
   return (
-    <Link href={`/journeys/${journey.id}`} className="group block h-full">
-      <Card className="surface-card interactive-card hover:bg-muted/50 h-full flex flex-col">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 sm:gap-4">
-            <CardTitle className="line-clamp-2 text-lg">{journey.title}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant={status === "completed" ? "default" : "secondary"}
-                className="capitalize whitespace-nowrap"
-              >
-                {status}
-              </Badge>
-              <Badge variant="secondary" className="capitalize flex items-center whitespace-nowrap">
-                {getVisibilityIcon()}
-                {journey.visibility}
-              </Badge>
-            </div>
+    <Card className="surface-card interactive-card hover:bg-muted/50 h-full flex flex-col relative group">
+      <Link
+        href={`/journeys/${journey.id}`}
+        className="absolute inset-0 rounded-xl z-10"
+        aria-label={`Open journey ${journey.title}`}
+      />
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 sm:gap-4">
+          <CardTitle className="line-clamp-2 text-lg">{journey.title}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={status === "completed" ? "default" : "secondary"}
+              className="capitalize whitespace-nowrap"
+            >
+              {status}
+            </Badge>
+            <Badge variant="secondary" className="capitalize flex items-center whitespace-nowrap">
+              {getVisibilityIcon()}
+              {journey.visibility}
+            </Badge>
           </div>
-          {journey.description && (
-            <CardDescription className="line-clamp-3 mt-2">
-              {journey.description}
-            </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="flex-grow">
-          {ownerName ? (
+        </div>
+        {journey.description && (
+          <CardDescription className="line-clamp-3 mt-2">
+            {journey.description}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="flex-grow">
+        {ownerName ? (
+          ownerUsername ? (
+            <Link
+              href={`/u/${ownerUsername}`}
+              className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground transition-colors relative z-20"
+            >
+              <UserRound className="h-4 w-4" />
+              By {ownerName}
+            </Link>
+          ) : (
             <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
               <UserRound className="h-4 w-4" />
               By {ownerName}
             </p>
-          ) : null}
-        </CardContent>
-        <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t border-border/70 pt-4">
-          <CalendarDays className="h-4 w-4" />
-          <span>{dateRangeLabel}</span>
-        </CardFooter>
-      </Card>
-    </Link>
+          )
+        ) : null}
+      </CardContent>
+      <CardFooter className="text-sm text-muted-foreground flex items-center gap-2 border-t border-border/70 pt-4">
+        <CalendarDays className="h-4 w-4" />
+        <span>{dateRangeLabel}</span>
+      </CardFooter>
+    </Card>
   );
 }

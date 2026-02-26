@@ -45,21 +45,12 @@ async function PostContent({ id }: { id: string }) {
   return (
     <div className="space-y-8">
       <div className="surface-card p-4 sm:p-6">
-        {isAuthor ? (
-          <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
-            <Link href={`/journeys/${post.journey_id}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Journey
-            </Link>
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
-            <Link href="/search?type=journeys">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Public Journeys
-            </Link>
-          </Button>
-        )}
+        <Button variant="ghost" size="sm" asChild className="mb-4 -ml-3 text-muted-foreground">
+          <Link href={`/journeys/${post.journey_id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Journey
+          </Link>
+        </Button>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
           <div className="space-y-2">
