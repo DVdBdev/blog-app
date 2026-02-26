@@ -3,6 +3,7 @@
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { JourneyStatus, JourneyVisibility } from "@/types";
+import { requireActiveAccount } from "@/features/auth/account-status.server";
 
 export interface CreateJourneyData {
   title: string;
@@ -19,6 +20,11 @@ export async function createJourney(data: CreateJourneyData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   if (!data.title || data.title.trim() === "") {
@@ -63,6 +69,11 @@ export async function updateJourney(data: UpdateJourneyData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   if (!data.title || data.title.trim() === "") {
@@ -117,6 +128,11 @@ export async function deleteJourney(data: DeleteJourneyData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   const { data: profile } = await supabase

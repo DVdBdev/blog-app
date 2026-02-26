@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/features/auth/auth.service";
+import { getCurrentProfileStatus, signIn, signOut } from "@/features/auth/auth.service";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthMessage } from "@/features/auth/components/AuthMessage";
@@ -53,6 +53,13 @@ export default function LoginPage() {
 
       if (signInError) {
         setError(signInError.message);
+        return;
+      }
+
+      const accountStatus = await getCurrentProfileStatus();
+      if (accountStatus === "banned") {
+        await signOut();
+        setError("Your account has been suspended. Contact support for assistance.");
         return;
       }
 

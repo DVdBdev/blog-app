@@ -21,6 +21,7 @@ export async function createProfileForUser(
         email,
         username,
         display_name: username,
+        status: "active",
       },
     ])
     .select()

@@ -17,11 +17,11 @@ async function requireAdminUser() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id,role")
+    .select("id,role,status")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || profile?.role !== "admin") {
+  if (profileError || profile?.role !== "admin" || profile?.status !== "active") {
     return { supabase, user: null, error: "Not authorized" };
   }
 
@@ -53,7 +53,7 @@ export async function setUserRoleAction(formData: FormData) {
 
   const { data: targetProfile } = await supabase
     .from("profiles")
-    .select("id,role")
+    .select("id,role,status")
     .eq("id", targetUserId)
     .maybeSingle();
 
@@ -63,7 +63,8 @@ export async function setUserRoleAction(formData: FormData) {
 
   if (targetProfile.role === "admin" && nextRole === "user") {
     const adminCount = await getAdminCount(supabase);
-    if (adminCount <= 1) {
+    const activeAdminCount = await getActiveAdminCount(supabase);
+    if (adminCount <= 1 || (targetProfile.status === "active" && activeAdminCount <= 1)) {
       return { error: "Cannot demote the last admin" };
     }
   }
@@ -82,6 +83,64 @@ export async function setUserRoleAction(formData: FormData) {
   return { success: true };
 }
 
+async function getActiveAdminCount(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { count } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin")
+    .eq("status", "active");
+  return count ?? 0;
+}
+
+export async function setUserStatusAction(formData: FormData) {
+  const targetUserId = String(formData.get("targetUserId") ?? "");
+  const nextStatus = String(formData.get("nextStatus") ?? "") as "active" | "banned";
+
+  if (!targetUserId || (nextStatus !== "active" && nextStatus !== "banned")) {
+    return { error: "Invalid status request" };
+  }
+
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  if (targetUserId === user.id && nextStatus === "banned") {
+    return { error: "You cannot ban your own account" };
+  }
+
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("id,role,status")
+    .eq("id", targetUserId)
+    .maybeSingle();
+
+  if (!targetProfile) {
+    return { error: "User not found" };
+  }
+
+  if (targetProfile.role === "admin" && targetProfile.status === "active" && nextStatus === "banned") {
+    const activeAdminCount = await getActiveAdminCount(supabase);
+    if (activeAdminCount <= 1) {
+      return { error: "Cannot ban the last active admin" };
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ status: nextStatus })
+    .eq("id", targetUserId);
+
+  if (updateError) {
+    console.error("Error updating user status:", updateError);
+    return { error: "Failed to update status" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/users");
+  revalidatePath("/search");
+  revalidatePath("/journeys");
+  return { success: true };
+}
+
 export async function deleteUserAction(formData: FormData) {
   const targetUserId = String(formData.get("targetUserId") ?? "");
   if (!targetUserId) return { error: "Invalid user id" };
@@ -95,7 +154,7 @@ export async function deleteUserAction(formData: FormData) {
 
   const { data: targetProfile } = await supabase
     .from("profiles")
-    .select("id,role")
+    .select("id,role,status")
     .eq("id", targetUserId)
     .maybeSingle();
 
@@ -104,8 +163,9 @@ export async function deleteUserAction(formData: FormData) {
   }
 
   if (targetProfile.role === "admin") {
+    const activeAdminCount = await getActiveAdminCount(supabase);
     const adminCount = await getAdminCount(supabase);
-    if (adminCount <= 1) {
+    if (adminCount <= 1 || (targetProfile.status === "active" && activeAdminCount <= 1)) {
       return { error: "Cannot remove the last admin" };
     }
   }

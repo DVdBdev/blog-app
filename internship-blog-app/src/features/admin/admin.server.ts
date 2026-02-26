@@ -5,6 +5,7 @@ export interface AdminUserRow {
   username: string;
   email: string;
   role: "user" | "admin";
+  status: "active" | "banned";
   created_at: string;
 }
 
@@ -34,7 +35,7 @@ export async function getAdminUsers(): Promise<AdminUserRow[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,username,email,role,created_at")
+    .select("id,username,email,role,status,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {

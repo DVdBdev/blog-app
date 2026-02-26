@@ -1,10 +1,12 @@
 export type UserRole = "user" | "admin";
+export type ProfileStatus = "active" | "banned";
 
 export interface Profile {
   id: string;
   email: string;
   username: string;
   role: UserRole;
+  status: ProfileStatus;
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;

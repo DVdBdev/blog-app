@@ -3,6 +3,7 @@
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { PostStatus } from "@/types";
+import { requireActiveAccount } from "@/features/auth/account-status.server";
 
 export interface CreatePostData {
   journey_id: string;
@@ -20,6 +21,11 @@ export async function createPost(data: CreatePostData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   if (!data.title || data.title.trim() === "") {
@@ -65,6 +71,11 @@ export async function updatePost(data: UpdatePostData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   if (!data.title || data.title.trim() === "") {
@@ -116,6 +127,11 @@ export async function deletePost(data: DeletePostData) {
 
   if (userError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  const { error: statusError } = await requireActiveAccount();
+  if (statusError) {
+    return { error: "Account suspended" };
   }
 
   const { data: profile } = await supabase

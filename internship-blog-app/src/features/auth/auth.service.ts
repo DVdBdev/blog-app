@@ -10,6 +10,25 @@ export async function signIn(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
+export async function getCurrentProfileStatus() {
+  const supabase = createBrowserSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return (data?.status as "active" | "banned" | null) ?? "active";
+}
+
 export async function signOut() {
   const supabase = createBrowserSupabaseClient();
   return supabase.auth.signOut();

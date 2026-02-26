@@ -1,51 +1,11 @@
 import Link from "next/link";
-import { createClient } from "@/services/supabase/server";
 import { getCurrentUser } from "@/features/auth/auth.server";
-import { Journey } from "@/types";
 import { JourneyCard } from "@/features/journeys/components/JourneyCard";
 import { Button } from "@/components/ui/button";
+import { getRecentAdminPublicJourneys } from "@/features/journeys/journeys.public.server";
 
 export default async function Home() {
-  const [user, supabase] = await Promise.all([getCurrentUser(), createClient()]);
-
-  const { data, error } = await supabase
-    .from("journeys")
-    .select("*")
-    .eq("visibility", "public")
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  if (error) {
-    console.error("Error fetching home journeys:", error);
-  }
-
-  const journeys = (data ?? []) as Journey[];
-  const ownerIds = Array.from(new Set(journeys.map((journey) => journey.owner_id)));
-  let ownerById = new Map<string, { name: string; username: string | null }>();
-
-  if (ownerIds.length > 0) {
-    const { data: owners, error: ownersError } = await supabase
-      .from("profiles")
-      .select("id,username,display_name")
-      .in("id", ownerIds);
-
-    if (ownersError) {
-      console.error("Error fetching journey owners for home:", ownersError);
-    } else {
-      ownerById = new Map(
-        (owners ?? []).map((owner) => [
-          owner.id as string,
-          {
-            name:
-              ((owner.display_name as string | null) ??
-                (owner.username as string | null) ??
-                "Unknown writer"),
-            username: (owner.username as string | null) ?? null,
-          },
-        ]),
-      );
-    }
-  }
+  const [user, journeys] = await Promise.all([getCurrentUser(), getRecentAdminPublicJourneys(3)]);
 
   const viewAllHref = user ? "/journeys" : "/search?type=journeys";
 
@@ -62,7 +22,7 @@ export default async function Home() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Latest Public Journeys</h2>
+          <h2 className="text-xl font-semibold">Latest Admin Journeys</h2>
           <Button asChild variant="outline" size="sm">
             <Link href={viewAllHref}>View all journeys</Link>
           </Button>
@@ -70,17 +30,17 @@ export default async function Home() {
 
         {journeys.length === 0 ? (
           <div className="empty-state">
-            <h3 className="text-xl font-semibold mb-2">No public journeys yet</h3>
-            <p className="text-muted-foreground">Check back soon for new updates from the community.</p>
+            <h3 className="text-xl font-semibold mb-2">No admin journeys yet</h3>
+            <p className="text-muted-foreground">Admin-created public journeys will appear here once available.</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {journeys.map((journey) => (
+            {journeys.map((item) => (
               <JourneyCard
-                key={journey.id}
-                journey={journey}
-                ownerName={ownerById.get(journey.owner_id)?.name ?? null}
-                ownerUsername={ownerById.get(journey.owner_id)?.username ?? null}
+                key={item.journey.id}
+                journey={item.journey}
+                ownerName={item.ownerName}
+                ownerUsername={item.ownerUsername}
               />
             ))}
           </div>

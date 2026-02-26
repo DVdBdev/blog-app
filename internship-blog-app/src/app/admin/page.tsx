@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   deleteJourneyAdminAction,
   deletePostAdminAction,
   deleteUserAction,
   setUserRoleAction,
+  setUserStatusAction,
   updateJourneyAdminAction,
   updatePostAdminAction,
 } from "@/features/admin/admin.actions";
@@ -39,6 +41,11 @@ function TabLink({ tab, activeTab, label }: { tab: AdminTab; activeTab: AdminTab
 async function setUserRoleFormAction(formData: FormData) {
   "use server";
   await setUserRoleAction(formData);
+}
+
+async function setUserStatusFormAction(formData: FormData) {
+  "use server";
+  await setUserStatusAction(formData);
 }
 
 async function deleteUserFormAction(formData: FormData) {
@@ -82,8 +89,13 @@ function UsersSection({
               <h3 className="font-semibold text-lg">@{user.username}</h3>
               <p className="text-sm text-muted-foreground">{user.email}</p>
               <p className="text-sm text-muted-foreground">
-                Role: <span className="capitalize">{user.role}</span> · Joined {formatDate(user.created_at)}
+                Role: <span className="capitalize">{user.role}</span> | Joined {formatDate(user.created_at)}
               </p>
+              <div className="mt-2">
+                <Badge variant={user.status === "banned" ? "destructive" : "secondary"}>
+                  {user.status === "banned" ? "Banned" : "Active"}
+                </Badge>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -106,6 +118,24 @@ function UsersSection({
                     disabled={user.id === currentUserId}
                   >
                     Demote to user
+                  </Button>
+                </form>
+              )}
+
+              {user.status === "active" ? (
+                <form action={setUserStatusFormAction}>
+                  <input type="hidden" name="targetUserId" value={user.id} />
+                  <input type="hidden" name="nextStatus" value="banned" />
+                  <Button type="submit" size="sm" variant="outline" disabled={user.id === currentUserId}>
+                    Ban user
+                  </Button>
+                </form>
+              ) : (
+                <form action={setUserStatusFormAction}>
+                  <input type="hidden" name="targetUserId" value={user.id} />
+                  <input type="hidden" name="nextStatus" value="active" />
+                  <Button type="submit" size="sm" variant="outline">
+                    Unban user
                   </Button>
                 </form>
               )}
@@ -133,7 +163,7 @@ function JourneysSection({ journeys }: { journeys: Awaited<ReturnType<typeof get
             <div>
               <h3 className="font-semibold text-lg">{journey.title}</h3>
               <p className="text-sm text-muted-foreground">
-                Owner: @{journey.owner_username ?? "unknown"} · Created {formatDate(journey.created_at)}
+                Owner: @{journey.owner_username ?? "unknown"} | Created {formatDate(journey.created_at)}
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
@@ -193,7 +223,7 @@ function PostsSection({ posts }: { posts: Awaited<ReturnType<typeof getAdminPost
             <div>
               <h3 className="font-semibold text-lg">{post.title}</h3>
               <p className="text-sm text-muted-foreground">
-                Author: @{post.author_username ?? "unknown"} · Journey: {post.journey_title ?? "Unknown"} · Created{" "}
+                Author: @{post.author_username ?? "unknown"} | Journey: {post.journey_title ?? "Unknown"} | Created{" "}
                 {formatDate(post.created_at)}
               </p>
             </div>

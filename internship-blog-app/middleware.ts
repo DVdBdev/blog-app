@@ -26,7 +26,33 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.status === "banned") {
+      await supabase.auth.signOut();
+
+      if (!request.nextUrl.pathname.startsWith("/suspended")) {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/suspended";
+        redirectUrl.search = "";
+
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        response.cookies.getAll().forEach((cookie) => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+        });
+        return redirectResponse;
+      }
+    }
+  }
 
   return response;
 }

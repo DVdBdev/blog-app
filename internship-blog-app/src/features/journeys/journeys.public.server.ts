@@ -5,6 +5,12 @@
 import { createClient } from "@/services/supabase/server";
 import { Journey, Profile } from "@/types";
 
+export interface HomepageJourneyItem {
+  journey: Journey;
+  ownerName: string | null;
+  ownerUsername: string | null;
+}
+
 /**
  * Fetch a profile by username. Returns null if not found.
  * Safe to call from public (unauthenticated) pages.
@@ -50,4 +56,36 @@ export async function getPublicJourneysByOwner(ownerId: string): Promise<Journey
   }
 
   return journeys as Journey[];
+}
+
+/**
+ * Fetch recent public journeys where the owner has role = admin.
+ * Used by the homepage showcase to keep curation logic in the data layer.
+ */
+export async function getRecentAdminPublicJourneys(limit = 3): Promise<HomepageJourneyItem[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("journeys")
+    .select("*, profiles!inner(username,display_name,role)")
+    .eq("visibility", "public")
+    .eq("profiles.role", "admin")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching admin public journeys for home:", error);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const journey = row as unknown as Journey;
+    const owner = (row as { profiles?: { username?: string | null; display_name?: string | null } | null }).profiles;
+
+    return {
+      journey,
+      ownerName: owner?.display_name ?? owner?.username ?? "Unknown writer",
+      ownerUsername: owner?.username ?? null,
+    };
+  });
 }

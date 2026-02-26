@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Profile } from "@/types";
 
 export type UpdateProfileData = Partial<
-  Omit<Profile, "id" | "username" | "email" | "created_at" | "updated_at">
+  Omit<Profile, "id" | "username" | "email" | "created_at" | "updated_at" | "role" | "status">
 >;
 
 export async function updateProfile(data: UpdateProfileData) {
