@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Profile } from "@/types";
-import { Briefcase, Github, Globe, GraduationCap, Linkedin, MapPin, Target } from "lucide-react";
+import { Briefcase, Github, Globe, GraduationCap, Link2, Linkedin, Mail, MapPin, Target } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
@@ -57,6 +57,12 @@ export function ProfileDetailsCard({ profile }: ProfileDetailsCardProps) {
       value: profile.location,
       icon: <MapPin className="h-5 w-5 text-muted-foreground" />,
     },
+    {
+      id: "contact_email",
+      label: "Contact Email",
+      value: profile.contact_email,
+      icon: <Mail className="h-5 w-5 text-muted-foreground" />,
+    },
   ].filter((detail) => hasValue(detail.value));
 
   const socialLinks = [profile.github_url, profile.linkedin_url, profile.website_url]
@@ -84,7 +90,16 @@ export function ProfileDetailsCard({ profile }: ProfileDetailsCardProps) {
                   {detail.icon}
                   <div className="flex-1">
                     <p className="text-sm font-medium leading-none">{detail.label}</p>
-                    <p className="text-sm text-muted-foreground">{detail.value}</p>
+                    {detail.id === "contact_email" ? (
+                      <a
+                        href={`mailto:${detail.value}`}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors break-all"
+                      >
+                        {detail.value}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{detail.value}</p>
+                    )}
                   </div>
                 </div>
                 {index < details.length - 1 && <Separator />}
@@ -95,7 +110,10 @@ export function ProfileDetailsCard({ profile }: ProfileDetailsCardProps) {
 
             {socialLinks.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium leading-none">Links</p>
+                <p className="text-sm font-medium leading-none inline-flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  Links
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {socialLinks.map((link) => (
                     <Link
