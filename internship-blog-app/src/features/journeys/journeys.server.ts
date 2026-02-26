@@ -5,6 +5,8 @@ export interface JourneyViewResult {
   journey: Journey | null;
   /** The authenticated user's id, or null if unauthenticated. */
   currentUserId: string | null;
+  /** True when the authenticated user is an admin. */
+  isAdmin: boolean;
   /** Journey owner's preferred display name, when available. */
   ownerName: string | null;
   /** Journey owner's username (used to build /u/[username] links). */
@@ -45,6 +47,16 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   } = await supabase.auth.getUser();
 
   const currentUserId = user?.id ?? null;
+  let isAdmin = false;
+
+  if (currentUserId) {
+    const { data: currentProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", currentUserId)
+      .maybeSingle();
+    isAdmin = currentProfile?.role === "admin";
+  }
 
   const { data: journey, error } = await supabase
     .from("journeys")
@@ -55,21 +67,21 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
   if (error) {
     // "No rows" after delete should be treated as a normal not-found case.
     if (error.code === "PGRST116") {
-      return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
+      return { journey: null, currentUserId, isAdmin, ownerName: null, ownerUsername: null };
     }
     console.error("Error fetching journey:", error);
-    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
+    return { journey: null, currentUserId, isAdmin, ownerName: null, ownerUsername: null };
   }
 
   if (!journey) {
-    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
+    return { journey: null, currentUserId, isAdmin, ownerName: null, ownerUsername: null };
   }
 
   const typedJourney = journey as Journey;
 
   // Deny access to private journeys for non-owners (defence-in-depth; RLS handles it too).
-  if (typedJourney.visibility === "private" && currentUserId !== typedJourney.owner_id) {
-    return { journey: null, currentUserId, ownerName: null, ownerUsername: null };
+  if (typedJourney.visibility === "private" && currentUserId !== typedJourney.owner_id && !isAdmin) {
+    return { journey: null, currentUserId, isAdmin, ownerName: null, ownerUsername: null };
   }
 
   let ownerName: string | null = null;
@@ -87,5 +99,5 @@ export async function getJourneyById(id: string): Promise<JourneyViewResult> {
     ownerName = (owner.display_name as string | null) ?? ownerUsername ?? null;
   }
 
-  return { journey: typedJourney, currentUserId, ownerName, ownerUsername };
+  return { journey: typedJourney, currentUserId, isAdmin, ownerName, ownerUsername };
 }

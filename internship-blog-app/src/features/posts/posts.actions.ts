@@ -71,17 +71,28 @@ export async function updatePost(data: UpdatePostData) {
     return { error: "Title is required" };
   }
 
-  const { data: updated, error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isAdmin = profile?.role === "admin";
+
+  let query = supabase
     .from("posts")
     .update({
       title: data.title.trim(),
       content: data.content,
       status: data.status,
     })
-    .eq("id", data.id)
-    .eq("author_id", user.id)
-    .select("id,content")
-    .single();
+    .eq("id", data.id);
+
+  if (!isAdmin) {
+    query = query.eq("author_id", user.id);
+  }
+
+  const { data: updated, error } = await query.select("id,content").single();
 
   if (error) {
     console.error("Error updating post:", error);
@@ -107,13 +118,24 @@ export async function deletePost(data: DeletePostData) {
     return { error: "Not authenticated" };
   }
 
-  const { data: deletedPost, error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isAdmin = profile?.role === "admin";
+
+  let query = supabase
     .from("posts")
     .delete()
-    .eq("id", data.id)
-    .eq("author_id", user.id)
-    .select("id,journey_id")
-    .maybeSingle();
+    .eq("id", data.id);
+
+  if (!isAdmin) {
+    query = query.eq("author_id", user.id);
+  }
+
+  const { data: deletedPost, error } = await query.select("id,journey_id").maybeSingle();
 
   if (error) {
     console.error("Error deleting post:", error);

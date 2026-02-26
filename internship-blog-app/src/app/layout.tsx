@@ -43,7 +43,15 @@ export default async function RootLayout({
         />
         <div className="relative z-10">
           <Navbar
-            user={user ? { email: user.email ?? undefined, username: profile?.username ?? undefined } : null}
+            user={
+              user
+                ? {
+                    email: user.email ?? undefined,
+                    username: profile?.username ?? undefined,
+                    role: profile?.role,
+                  }
+                : null
+            }
           />
           {children}
         </div>

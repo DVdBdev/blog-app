@@ -69,7 +69,15 @@ export async function updateJourney(data: UpdateJourneyData) {
     return { error: "Title is required" };
   }
 
-  const { error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isAdmin = profile?.role === "admin";
+
+  let query = supabase
     .from("journeys")
     .update({
       title: data.title.trim(),
@@ -78,8 +86,13 @@ export async function updateJourney(data: UpdateJourneyData) {
       status: data.status,
       completed_at: data.status === "completed" ? (data.completed_at ?? new Date().toISOString()) : null,
     })
-    .eq("id", data.id)
-    .eq("owner_id", user.id);
+    .eq("id", data.id);
+
+  if (!isAdmin) {
+    query = query.eq("owner_id", user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error updating journey:", error);
@@ -106,13 +119,24 @@ export async function deleteJourney(data: DeleteJourneyData) {
     return { error: "Not authenticated" };
   }
 
-  const { data: deletedJourney, error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isAdmin = profile?.role === "admin";
+
+  let query = supabase
     .from("journeys")
     .delete()
-    .eq("id", data.id)
-    .eq("owner_id", user.id)
-    .select("id")
-    .maybeSingle();
+    .eq("id", data.id);
+
+  if (!isAdmin) {
+    query = query.eq("owner_id", user.id);
+  }
+
+  const { data: deletedJourney, error } = await query.select("id").maybeSingle();
 
   if (error) {
     console.error("Error deleting journey:", error);

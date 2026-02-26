@@ -1,7 +1,10 @@
+export type UserRole = "user" | "admin";
+
 export interface Profile {
   id: string;
   email: string;
   username: string;
+  role: UserRole;
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;

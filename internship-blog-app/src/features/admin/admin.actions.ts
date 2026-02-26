@@ -1,0 +1,237 @@
+"use server";
+
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { createClient } from "@/services/supabase/server";
+import { revalidatePath } from "next/cache";
+
+async function requireAdminUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { supabase, user: null, error: "Not authenticated" };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id,role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || profile?.role !== "admin") {
+    return { supabase, user: null, error: "Not authorized" };
+  }
+
+  return { supabase, user, error: null };
+}
+
+async function getAdminCount(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { count } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin");
+  return count ?? 0;
+}
+
+export async function setUserRoleAction(formData: FormData) {
+  const targetUserId = String(formData.get("targetUserId") ?? "");
+  const nextRole = String(formData.get("nextRole") ?? "") as "user" | "admin";
+
+  if (!targetUserId || (nextRole !== "user" && nextRole !== "admin")) {
+    return { error: "Invalid role request" };
+  }
+
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  if (targetUserId === user.id && nextRole !== "admin") {
+    return { error: "You cannot remove your own admin role" };
+  }
+
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("id,role")
+    .eq("id", targetUserId)
+    .maybeSingle();
+
+  if (!targetProfile) {
+    return { error: "User not found" };
+  }
+
+  if (targetProfile.role === "admin" && nextRole === "user") {
+    const adminCount = await getAdminCount(supabase);
+    if (adminCount <= 1) {
+      return { error: "Cannot demote the last admin" };
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ role: nextRole })
+    .eq("id", targetUserId);
+
+  if (updateError) {
+    console.error("Error updating user role:", updateError);
+    return { error: "Failed to update role" };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function deleteUserAction(formData: FormData) {
+  const targetUserId = String(formData.get("targetUserId") ?? "");
+  if (!targetUserId) return { error: "Invalid user id" };
+
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  if (targetUserId === user.id) {
+    return { error: "You cannot delete your own account from admin dashboard" };
+  }
+
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("id,role")
+    .eq("id", targetUserId)
+    .maybeSingle();
+
+  if (!targetProfile) {
+    return { error: "User not found" };
+  }
+
+  if (targetProfile.role === "admin") {
+    const adminCount = await getAdminCount(supabase);
+    if (adminCount <= 1) {
+      return { error: "Cannot remove the last admin" };
+    }
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+  if (deleteError) {
+    console.error("Error deleting user:", deleteError);
+    return { error: "Failed to delete user" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/users");
+  revalidatePath("/search");
+  revalidatePath("/journeys");
+  return { success: true };
+}
+
+export async function updateJourneyAdminAction(formData: FormData) {
+  const journeyId = String(formData.get("journeyId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const visibility = String(formData.get("visibility") ?? "") as "public" | "unlisted" | "private";
+  const status = String(formData.get("status") ?? "") as "active" | "completed";
+
+  if (!journeyId || !title) return { error: "Journey id and title are required" };
+  if (!["public", "unlisted", "private"].includes(visibility)) return { error: "Invalid visibility" };
+  if (!["active", "completed"].includes(status)) return { error: "Invalid status" };
+
+  const { supabase, error } = await requireAdminUser();
+  if (error) return { error };
+
+  const { error: updateError } = await supabase
+    .from("journeys")
+    .update({
+      title,
+      visibility,
+      status,
+      completed_at: status === "completed" ? new Date().toISOString() : null,
+    })
+    .eq("id", journeyId);
+
+  if (updateError) {
+    console.error("Error admin-updating journey:", updateError);
+    return { error: "Failed to update journey" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/journeys/${journeyId}`);
+  revalidatePath("/journeys");
+  return { success: true };
+}
+
+export async function deleteJourneyAdminAction(formData: FormData) {
+  const journeyId = String(formData.get("journeyId") ?? "");
+  if (!journeyId) return { error: "Invalid journey id" };
+
+  const { supabase, error } = await requireAdminUser();
+  if (error) return { error };
+
+  const { error: deleteError } = await supabase
+    .from("journeys")
+    .delete()
+    .eq("id", journeyId);
+
+  if (deleteError) {
+    console.error("Error admin-deleting journey:", deleteError);
+    return { error: "Failed to delete journey" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/journeys");
+  revalidatePath(`/journeys/${journeyId}`);
+  revalidatePath("/search");
+  return { success: true };
+}
+
+export async function updatePostAdminAction(formData: FormData) {
+  const postId = String(formData.get("postId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const status = String(formData.get("status") ?? "") as "draft" | "published";
+
+  if (!postId || !title) return { error: "Post id and title are required" };
+  if (!["draft", "published"].includes(status)) return { error: "Invalid status" };
+
+  const { supabase, error } = await requireAdminUser();
+  if (error) return { error };
+
+  const { error: updateError } = await supabase
+    .from("posts")
+    .update({ title, status })
+    .eq("id", postId);
+
+  if (updateError) {
+    console.error("Error admin-updating post:", updateError);
+    return { error: "Failed to update post" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath("/search");
+  return { success: true };
+}
+
+export async function deletePostAdminAction(formData: FormData) {
+  const postId = String(formData.get("postId") ?? "");
+  if (!postId) return { error: "Invalid post id" };
+
+  const { supabase, error } = await requireAdminUser();
+  if (error) return { error };
+
+  const { error: deleteError } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", postId);
+
+  if (deleteError) {
+    console.error("Error admin-deleting post:", deleteError);
+    return { error: "Failed to delete post" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath("/search");
+  return { success: true };
+}

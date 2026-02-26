@@ -9,6 +9,8 @@ export interface PostViewResult {
   post: PostWithAuthor | null;
   /** The authenticated user's id, or null if unauthenticated. */
   currentUserId: string | null;
+  /** True when the authenticated user is an admin. */
+  isAdmin: boolean;
 }
 
 export interface DailyContribution {
@@ -18,7 +20,7 @@ export interface DailyContribution {
 
 export async function getPostsByJourneyId(
   journeyId: string,
-  { publishedOnly = false }: { publishedOnly?: boolean } = {}
+  { publishedOnly = false, canManageAll = false }: { publishedOnly?: boolean; canManageAll?: boolean } = {}
 ): Promise<Post[]> {
   const supabase = await createClient();
   const {
@@ -34,10 +36,12 @@ export async function getPostsByJourneyId(
     .eq("journey_id", journeyId)
     .order("created_at", { ascending: false });
 
-  if (!forcePublishedOnly) {
-    // Owner: scope to their own posts so drafts are included
+  if (!forcePublishedOnly && !canManageAll) {
+    // Owners viewing their own journey include drafts from their own posts.
     query = query.eq("author_id", user!.id);
-  } else {
+  }
+
+  if (forcePublishedOnly) {
     // Public viewer: only published posts (RLS handles the actual enforcement)
     query = query.eq("status", "published");
   }
@@ -61,6 +65,16 @@ export async function getPostById(id: string): Promise<PostViewResult> {
   } = await supabase.auth.getUser();
 
   const currentUserId = user?.id ?? null;
+  let isAdmin = false;
+
+  if (currentUserId) {
+    const { data: currentProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", currentUserId)
+      .maybeSingle();
+    isAdmin = currentProfile?.role === "admin";
+  }
 
   const { data: post, error } = await supabase
     .from("posts")
@@ -70,17 +84,17 @@ export async function getPostById(id: string): Promise<PostViewResult> {
 
   if (error) {
     console.error("Error fetching post:", error);
-    return { post: null, currentUserId };
+    return { post: null, currentUserId, isAdmin };
   }
 
   const typedPost = post as PostWithAuthor;
 
   // Block unauthenticated / non-author access to drafts.
-  if (typedPost.status === "draft" && currentUserId !== typedPost.author_id) {
-    return { post: null, currentUserId };
+  if (typedPost.status === "draft" && currentUserId !== typedPost.author_id && !isAdmin) {
+    return { post: null, currentUserId, isAdmin };
   }
 
-  return { post: typedPost, currentUserId };
+  return { post: typedPost, currentUserId, isAdmin };
 }
 
 export async function getDailyPostContributionsByAuthor(

@@ -41,17 +41,21 @@ function getVisibilityIcon(visibility: string) {
 }
 
 async function JourneyContent({ id }: { id: string }) {
-  const { journey, currentUserId, ownerName, ownerUsername } = await getJourneyById(id);
+  const { journey, currentUserId, isAdmin, ownerName, ownerUsername } = await getJourneyById(id);
 
   if (!journey) {
     notFound();
   }
 
   const isOwner = !!currentUserId && currentUserId === journey.owner_id;
+  const canManageJourney = isOwner || isAdmin;
   const displayOwnerName = ownerName ?? "Unknown writer";
 
-  // Owners see all posts; public viewers only see published posts.
-  const posts = await getPostsByJourneyId(id, { publishedOnly: !isOwner });
+  // Owners and admins can see all posts; public viewers only see published posts.
+  const posts = await getPostsByJourneyId(id, {
+    publishedOnly: !canManageJourney,
+    canManageAll: canManageJourney,
+  });
 
   return (
     <div className="space-y-8">
@@ -81,7 +85,7 @@ async function JourneyContent({ id }: { id: string }) {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">{journey.title}</h1>
               {/* Visibility badge is only useful context for the owner */}
-              {isOwner && (
+              {canManageJourney && (
                 <Badge
                   variant="secondary"
                   className="capitalize flex items-center whitespace-nowrap"
@@ -110,7 +114,7 @@ async function JourneyContent({ id }: { id: string }) {
             )}
           </div>
 
-          {isOwner && (
+          {canManageJourney && (
             <div className="flex items-center gap-2 w-full md:w-auto">
               <div className="w-full md:w-auto">
                 <EditJourneyDialog journey={journey} />

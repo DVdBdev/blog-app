@@ -9,7 +9,11 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function Navbar({ user }: { user: { email?: string; username?: string } | null }) {
+export function Navbar({
+  user,
+}: {
+  user: { email?: string; username?: string; role?: "user" | "admin" | null } | null;
+}) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -57,6 +61,11 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
               <Link href="/settings" className={navLinkClass("/settings")}>
                 Settings
               </Link>
+              {user.role === "admin" && (
+                <Link href="/admin" className={navLinkClass("/admin")}>
+                  Admin
+                </Link>
+              )}
             </div>
             <div className="hidden lg:block">
               <UserStatusChip />
@@ -144,6 +153,11 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
               <Link href="/settings" className={mobileNavLinkClass("/settings")} onClick={() => setMobileOpen(false)}>
                 Settings
               </Link>
+              {user.role === "admin" && (
+                <Link href="/admin" className={mobileNavLinkClass("/admin")} onClick={() => setMobileOpen(false)}>
+                  Admin
+                </Link>
+              )}
             </div>
 
             <div className="pt-2 mt-1 border-t border-border/70">

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 async function PostContent({ id }: { id: string }) {
-  const { post, currentUserId } = await getPostById(id);
+  const { post, currentUserId, isAdmin } = await getPostById(id);
 
   if (!post) {
     return (
@@ -40,6 +40,7 @@ async function PostContent({ id }: { id: string }) {
   }
 
   const isAuthor = !!currentUserId && currentUserId === post.author_id;
+  const canManagePost = isAuthor || isAdmin;
   const authorName = post.profiles?.display_name ?? post.profiles?.username;
 
   return (
@@ -58,7 +59,7 @@ async function PostContent({ id }: { id: string }) {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               {/* Status badge is only meaningful / shown to the author */}
-              {isAuthor && (
+              {canManagePost && (
                 <Badge
                   variant={post.status === "published" ? "default" : "secondary"}
                   className="capitalize"
@@ -94,7 +95,7 @@ async function PostContent({ id }: { id: string }) {
               )}
             </div>
           </div>
-          {isAuthor && (
+          {canManagePost && (
             <div className="flex items-center gap-2 w-full md:w-auto">
               <div className="w-full md:w-auto">
                 <EditPostDialog post={post} />
