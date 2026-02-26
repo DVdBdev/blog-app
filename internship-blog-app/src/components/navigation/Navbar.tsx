@@ -48,6 +48,9 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
               <Link href="/journeys" className={navLinkClass("/journeys")}>
                 My Journeys
               </Link>
+              <Link href="/users" className={navLinkClass("/users")}>
+                Users
+              </Link>
               <Link href="/me" className={navLinkClass("/me")}>
                 My Profile
               </Link>
@@ -131,6 +134,9 @@ export function Navbar({ user }: { user: { email?: string; username?: string } |
               </Link>
               <Link href="/journeys" className={mobileNavLinkClass("/journeys")} onClick={() => setMobileOpen(false)}>
                 My Journeys
+              </Link>
+              <Link href="/users" className={mobileNavLinkClass("/users")} onClick={() => setMobileOpen(false)}>
+                Users
               </Link>
               <Link href="/me" className={mobileNavLinkClass("/me")} onClick={() => setMobileOpen(false)}>
                 My Profile
