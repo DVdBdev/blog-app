@@ -80,10 +80,17 @@ export async function getPostById(id: string): Promise<PostViewResult> {
     .from("posts")
     .select("*, profiles(username, display_name)")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.error("Error fetching post:", error);
+    // No row found is expected after deletion or for inaccessible records.
+    if (error.code !== "PGRST116") {
+      console.error("Error fetching post:", error);
+    }
+    return { post: null, currentUserId, isAdmin };
+  }
+
+  if (!post) {
     return { post: null, currentUserId, isAdmin };
   }
 

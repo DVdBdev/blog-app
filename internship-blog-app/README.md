@@ -50,3 +50,52 @@ The `profiles` table contains the following columns:
 - `updated_at` (timestamp with time zone, default now())
 
 The `updated_at` column is automatically updated by a Postgres trigger whenever a row is modified.
+
+## Testing
+
+Install dependencies first:
+
+```bash
+npm install
+```
+
+Run unit/integration tests:
+
+```bash
+npm test
+```
+
+Run tests in watch mode:
+
+```bash
+npm run test:watch
+```
+
+Run end-to-end tests:
+
+```bash
+npm run test:e2e
+```
+
+Current automated test files:
+
+- `src/features/admin/admin.server.test.ts` (admin moderation queue loading/filter behavior)
+- `src/features/admin/admin.actions.test.ts` (admin role/status action rules)
+- `src/features/auth/auth.actions.test.ts` (registration action behavior)
+- `src/features/auth/lib/validation.test.ts` (auth input validation)
+- `src/features/journeys/journeys.actions.test.ts` (journey create/update/delete actions)
+- `src/features/moderation/moderation.lib.test.ts` (moderation keyword scan + rich-text extraction)
+- `src/features/moderation/moderation.server.test.ts` (moderation log write behavior for user/service clients)
+- `src/features/moderation/huggingface-moderation.test.ts` (Hugging Face moderation API integration behavior)
+- `src/features/moderation/huggingface-image-moderation.test.ts` (Hugging Face image moderation API integration behavior)
+- `src/features/posts/posts.actions.test.ts` (post create/update/delete actions)
+- `src/features/profiles/profile.actions.test.ts` (profile update action)
+- `e2e/home.spec.ts` (home page smoke test)
+- `e2e/routes.spec.ts` (about/login/register/search route smoke tests)
+- `e2e/authenticated.spec.ts` (authenticated flows: protected pages, auth-page redirect, journey+post CRUD, admin moderation tab access, admin ban enforcement)
+
+For a detailed guide (expected results, red flags, and admin dashboard test runner), see [TESTING_README.md](./TESTING_README.md).
+
+For moderation architecture, rules, logging flow, and text vs image handling limits, see [MODERATION_README.md](./MODERATION_README.md).
+
+For provider-specific AI integration details (text + image models, env vars, and flow), see [AI_MODERATION_README.md](./AI_MODERATION_README.md).

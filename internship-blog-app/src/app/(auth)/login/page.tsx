@@ -1,156 +1,16 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/services/supabase/server";
+import { LoginPageClient } from "@/features/auth/components/LoginPageClient";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { getCurrentProfileStatus, signIn, signOut } from "@/features/auth/auth.service";
-import { AuthCard } from "@/features/auth/components/AuthCard";
-import { AuthField } from "@/features/auth/components/AuthField";
-import { AuthMessage } from "@/features/auth/components/AuthMessage";
-import { validateEmail } from "@/features/auth/lib/validation";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+export default async function LoginPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-const REMEMBERED_EMAIL_KEY = "blogapp.remembered_email";
-
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberEmail, setRememberEmail] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string }>({});
-
-  useEffect(() => {
-    const remembered = window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
-    if (remembered) {
-      setEmail(remembered);
-      setRememberEmail(true);
-    }
-  }, []);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setFieldErrors({});
-
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setFieldErrors({ email: emailError });
-      return;
-    }
-
-    if (!password) {
-      setError("Password is required");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { error: signInError } = await signIn(email, password);
-
-      if (signInError) {
-        setError(signInError.message);
-        return;
-      }
-
-      const accountStatus = await getCurrentProfileStatus();
-      if (accountStatus === "banned") {
-        await signOut();
-        setError("Your account has been suspended. Contact support for assistance.");
-        return;
-      }
-
-      if (rememberEmail) {
-        window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-      } else {
-        window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+  if (user) {
+    redirect("/");
   }
 
-  return (
-    <main className="page-shell">
-      <AuthCard
-        title="Welcome back"
-        description="Enter your email to sign in to your account"
-        footer={
-          <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="underline underline-offset-4 hover:text-primary">
-              Sign up
-            </Link>
-          </div>
-        }
-      >
-        <form onSubmit={handleSubmit} className="space-y-4 auth-form-stagger" autoComplete="on">
-          <AuthMessage type="error" message={error} />
-          
-          <AuthField
-            id="email"
-            label="Email"
-            type="email"
-            placeholder="m@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={fieldErrors.email}
-            disabled={isLoading}
-            autoComplete="username"
-          />
-
-          <div className="space-y-2">
-            <AuthField
-              id="password"
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              autoComplete="current-password"
-              className="w-full"
-            />
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <input
-                  id="remember-email"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input bg-background"
-                  checked={rememberEmail}
-                  onChange={(e) => setRememberEmail(e.target.checked)}
-                  disabled={isLoading}
-                />
-                <Label htmlFor="remember-email" className="text-sm font-normal text-muted-foreground">
-                  Remember email
-                </Label>
-              </div>
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                Password can be saved by your browser
-              </span>
-            </div>
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-sm font-medium text-muted-foreground hover:text-primary"
-              >
-                Forgot password?
-              </Link>
-            </div>
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-      </AuthCard>
-    </main>
-  );
+  return <LoginPageClient />;
 }

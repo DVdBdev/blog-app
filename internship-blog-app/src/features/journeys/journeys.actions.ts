@@ -4,6 +4,7 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { JourneyStatus, JourneyVisibility } from "@/types";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
+import { logModerationCandidate } from "@/features/moderation/moderation.server";
 
 export interface CreateJourneyData {
   title: string;
@@ -31,20 +32,40 @@ export async function createJourney(data: CreateJourneyData) {
     return { error: "Title is required" };
   }
 
-  const { error } = await supabase.from("journeys").insert([
-    {
-      owner_id: user.id,
-      title: data.title.trim(),
-      description: data.description?.trim() || null,
-      visibility: data.visibility,
-      status: "active",
-      completed_at: null,
-    },
-  ]);
+  const { data: insertedJourney, error } = await supabase
+    .from("journeys")
+    .insert([
+      {
+        owner_id: user.id,
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        visibility: data.visibility,
+        status: "active",
+        completed_at: null,
+      },
+    ])
+    .select("id")
+    .single();
 
   if (error) {
     console.error("Error creating journey:", error);
     return { error: "Failed to create journey" };
+  }
+
+  const journeyId = insertedJourney?.id as string;
+  await logModerationCandidate({
+    userId: user.id,
+    contentType: "journey_title",
+    relatedEntityId: journeyId,
+    text: data.title,
+  });
+  if (data.description?.trim()) {
+    await logModerationCandidate({
+      userId: user.id,
+      contentType: "journey_description",
+      relatedEntityId: journeyId,
+      text: data.description,
+    });
   }
 
   revalidatePath("/journeys");
@@ -108,6 +129,21 @@ export async function updateJourney(data: UpdateJourneyData) {
   if (error) {
     console.error("Error updating journey:", error);
     return { error: "Failed to update journey" };
+  }
+
+  await logModerationCandidate({
+    userId: user.id,
+    contentType: "journey_title",
+    relatedEntityId: data.id,
+    text: data.title,
+  });
+  if (data.description?.trim()) {
+    await logModerationCandidate({
+      userId: user.id,
+      contentType: "journey_description",
+      relatedEntityId: data.id,
+      text: data.description,
+    });
   }
 
   revalidatePath(`/journeys/${data.id}`);

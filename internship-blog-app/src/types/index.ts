@@ -51,3 +51,14 @@ export interface Post {
   created_at: string;
   updated_at: string;
 }
+
+export type ModerationContentType =
+  | "username"
+  | "profile_bio"
+  | "journey_title"
+  | "journey_description"
+  | "post_title"
+  | "post_content"
+  | "post_image";
+
+export type ModerationStatus = "pending" | "reviewed" | "dismissed" | "action_taken";

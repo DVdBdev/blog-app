@@ -4,6 +4,8 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { PostStatus } from "@/types";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
+import { logImageModerationCandidate, logModerationCandidate } from "@/features/moderation/moderation.server";
+import { extractImageUrlsFromRichText, extractRichTextContent } from "@/features/moderation/moderation.lib";
 
 export interface CreatePostData {
   journey_id: string;
@@ -49,6 +51,30 @@ export async function createPost(data: CreatePostData) {
   if (error) {
     console.error("Error creating post:", error);
     return { error: "Failed to create post" };
+  }
+
+  await logModerationCandidate({
+    userId: user.id,
+    contentType: "post_title",
+    relatedEntityId: inserted.id as string,
+    text: data.title,
+  });
+  const createdPostText = extractRichTextContent(data.content);
+  if (createdPostText) {
+    await logModerationCandidate({
+      userId: user.id,
+      contentType: "post_content",
+      relatedEntityId: inserted.id as string,
+      text: createdPostText,
+    });
+  }
+  const createdPostImages = extractImageUrlsFromRichText(data.content);
+  for (const imageUrl of createdPostImages) {
+    await logImageModerationCandidate({
+      userId: user.id,
+      relatedEntityId: inserted.id as string,
+      imageUrl,
+    });
   }
 
   revalidatePath(`/journeys/${data.journey_id}`);
@@ -108,6 +134,30 @@ export async function updatePost(data: UpdatePostData) {
   if (error) {
     console.error("Error updating post:", error);
     return { error: "Failed to update post" };
+  }
+
+  await logModerationCandidate({
+    userId: user.id,
+    contentType: "post_title",
+    relatedEntityId: data.id,
+    text: data.title,
+  });
+  const updatedPostText = extractRichTextContent(data.content);
+  if (updatedPostText) {
+    await logModerationCandidate({
+      userId: user.id,
+      contentType: "post_content",
+      relatedEntityId: data.id,
+      text: updatedPostText,
+    });
+  }
+  const updatedPostImages = extractImageUrlsFromRichText(data.content);
+  for (const imageUrl of updatedPostImages) {
+    await logImageModerationCandidate({
+      userId: user.id,
+      relatedEntityId: data.id,
+      imageUrl,
+    });
   }
 
   revalidatePath(`/posts/${data.id}`);

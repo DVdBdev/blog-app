@@ -13,12 +13,12 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (profileError) {
+  if (profileError && profileError.code !== "PGRST116") {
     console.error("Error fetching profile:", profileError);
     return null;
   }
 
-  return profile as Profile;
+  return (profile ?? null) as Profile | null;
 }

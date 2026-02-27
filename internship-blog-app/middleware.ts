@@ -31,6 +31,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    const isAuthPage =
+      request.nextUrl.pathname.startsWith("/login") ||
+      request.nextUrl.pathname.startsWith("/register");
+
+    if (isAuthPage) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("status")

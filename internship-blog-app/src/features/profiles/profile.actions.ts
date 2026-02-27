@@ -3,6 +3,7 @@
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Profile } from "@/types";
+import { logModerationCandidate } from "@/features/moderation/moderation.server";
 
 export type UpdateProfileData = Partial<
   Omit<Profile, "id" | "username" | "email" | "created_at" | "updated_at" | "role" | "status">
@@ -27,6 +28,15 @@ export async function updateProfile(data: UpdateProfileData) {
   if (error) {
     console.error("Error updating profile:", error);
     return { error: "Failed to update profile" };
+  }
+
+  if (typeof data.bio === "string" && data.bio.trim()) {
+    await logModerationCandidate({
+      userId: user.id,
+      contentType: "profile_bio",
+      relatedEntityId: user.id,
+      text: data.bio,
+    });
   }
 
   revalidatePath("/me");
