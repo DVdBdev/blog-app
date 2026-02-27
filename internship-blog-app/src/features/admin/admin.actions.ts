@@ -1,8 +1,18 @@
 "use server";
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
+
+const execFileAsync = promisify(execFile);
+
+type AdminTestRunState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  output: string;
+};
 
 async function requireAdminUser() {
   const supabase = await createClient();
@@ -117,11 +127,8 @@ export async function setUserStatusAction(formData: FormData) {
     return { error: "User not found" };
   }
 
-  if (targetProfile.role === "admin" && targetProfile.status === "active" && nextStatus === "banned") {
-    const activeAdminCount = await getActiveAdminCount(supabase);
-    if (activeAdminCount <= 1) {
-      return { error: "Cannot ban the last active admin" };
-    }
+  if (targetProfile.role === "admin" && nextStatus === "banned") {
+    return { error: "Admins cannot ban other admins" };
   }
 
   const { error: updateError } = await supabase
@@ -271,6 +278,77 @@ export async function updatePostAdminAction(formData: FormData) {
   revalidatePath(`/posts/${postId}`);
   revalidatePath("/search");
   return { success: true };
+}
+
+export async function runAdminTestsAction(
+  _prevState: AdminTestRunState,
+  formData: FormData
+): Promise<AdminTestRunState> {
+  const script = String(formData.get("script") ?? "");
+  const allowedScripts = new Set(["test", "test:e2e"]);
+
+  if (!allowedScripts.has(script)) {
+    return {
+      status: "error",
+      message: "Invalid test command",
+      output: "",
+    };
+  }
+
+  const { error } = await requireAdminUser();
+  if (error) {
+    return {
+      status: "error",
+      message: error,
+      output: "",
+    };
+  }
+
+  const isEnabled = process.env.NODE_ENV !== "production" || process.env.ENABLE_ADMIN_TEST_RUNNER === "true";
+  if (!isEnabled) {
+    return {
+      status: "error",
+      message: "Test runner is disabled in production",
+      output: "",
+    };
+  }
+
+  const timeoutMs = script === "test:e2e" ? 300_000 : 120_000;
+
+  try {
+    const command =
+      process.platform === "win32"
+        ? execFileAsync("cmd.exe", ["/d", "/s", "/c", `npm run ${script}`], {
+            cwd: process.cwd(),
+            timeout: timeoutMs,
+            maxBuffer: 2 * 1024 * 1024,
+          })
+        : execFileAsync("npm", ["run", script], {
+            cwd: process.cwd(),
+            timeout: timeoutMs,
+            maxBuffer: 2 * 1024 * 1024,
+          });
+
+    const { stdout, stderr } = await command;
+
+    const output = `${stdout ?? ""}${stderr ?? ""}`.trim().slice(-8000);
+    return {
+      status: "success",
+      message: `Completed: npm run ${script}`,
+      output,
+    };
+  } catch (error) {
+    const err = error as { stdout?: string; stderr?: string; message?: string };
+    const output = `${err.stdout ?? ""}${err.stderr ?? ""}${err.message ? `\n${err.message}` : ""}`
+      .trim()
+      .slice(-8000);
+
+    return {
+      status: "error",
+      message: `Failed: npm run ${script}`,
+      output,
+    };
+  }
 }
 
 export async function deletePostAdminAction(formData: FormData) {

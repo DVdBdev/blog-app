@@ -50,3 +50,43 @@ The `profiles` table contains the following columns:
 - `updated_at` (timestamp with time zone, default now())
 
 The `updated_at` column is automatically updated by a Postgres trigger whenever a row is modified.
+
+## Testing
+
+Install dependencies first:
+
+```bash
+npm install
+```
+
+Run unit/integration tests:
+
+```bash
+npm test
+```
+
+Run tests in watch mode:
+
+```bash
+npm run test:watch
+```
+
+Run end-to-end tests:
+
+```bash
+npm run test:e2e
+```
+
+Current automated test files:
+
+- `src/features/admin/admin.actions.test.ts` (admin role/status action rules)
+- `src/features/auth/auth.actions.test.ts` (registration action behavior)
+- `src/features/auth/lib/validation.test.ts` (auth input validation)
+- `src/features/journeys/journeys.actions.test.ts` (journey create/update/delete actions)
+- `src/features/posts/posts.actions.test.ts` (post create/update/delete actions)
+- `src/features/profiles/profile.actions.test.ts` (profile update action)
+- `e2e/home.spec.ts` (home page smoke test)
+- `e2e/routes.spec.ts` (about/login/register/search route smoke tests)
+- `e2e/authenticated.spec.ts` (authenticated user/admin flows)
+
+For a detailed guide (expected results, red flags, and admin dashboard test runner), see [TESTING_README.md](./TESTING_README.md).

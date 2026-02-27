@@ -30,13 +30,39 @@ export interface AdminPostRow {
   author_username: string | null;
 }
 
-export async function getAdminUsers(): Promise<AdminUserRow[]> {
-  const supabase = await createClient();
+export interface AdminUsersFilter {
+  query?: string;
+  role?: "user" | "admin" | "all";
+}
 
-  const { data, error } = await supabase
+export interface AdminJourneysFilter {
+  query?: string;
+}
+
+export interface AdminPostsFilter {
+  query?: string;
+  status?: "draft" | "published" | "all";
+}
+
+export async function getAdminUsers(filter: AdminUsersFilter = {}): Promise<AdminUserRow[]> {
+  const supabase = await createClient();
+  const queryText = filter.query?.trim();
+  const roleFilter = filter.role ?? "all";
+
+  let query = supabase
     .from("profiles")
     .select("id,username,email,role,status,created_at")
     .order("created_at", { ascending: false });
+
+  if (queryText) {
+    query = query.or(`username.ilike.%${queryText}%,email.ilike.%${queryText}%`);
+  }
+
+  if (roleFilter === "user" || roleFilter === "admin") {
+    query = query.eq("role", roleFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error loading admin users:", error);
@@ -46,13 +72,20 @@ export async function getAdminUsers(): Promise<AdminUserRow[]> {
   return (data ?? []) as AdminUserRow[];
 }
 
-export async function getAdminJourneys(): Promise<AdminJourneyRow[]> {
+export async function getAdminJourneys(filter: AdminJourneysFilter = {}): Promise<AdminJourneyRow[]> {
   const supabase = await createClient();
+  const queryText = filter.query?.trim();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("journeys")
     .select("id,title,visibility,status,created_at,owner_id,profiles!journeys_owner_id_fkey(username)")
     .order("created_at", { ascending: false });
+
+  if (queryText) {
+    query = query.ilike("title", `%${queryText}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error loading admin journeys:", error);
@@ -71,13 +104,25 @@ export async function getAdminJourneys(): Promise<AdminJourneyRow[]> {
   }));
 }
 
-export async function getAdminPosts(): Promise<AdminPostRow[]> {
+export async function getAdminPosts(filter: AdminPostsFilter = {}): Promise<AdminPostRow[]> {
   const supabase = await createClient();
+  const queryText = filter.query?.trim();
+  const statusFilter = filter.status ?? "all";
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("posts")
     .select("id,title,status,created_at,journey_id,author_id,journeys(title),profiles!posts_author_id_fkey(username)")
     .order("created_at", { ascending: false });
+
+  if (queryText) {
+    query = query.ilike("title", `%${queryText}%`);
+  }
+
+  if (statusFilter === "draft" || statusFilter === "published") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error loading admin posts:", error);

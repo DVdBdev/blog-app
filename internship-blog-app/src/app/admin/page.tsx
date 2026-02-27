@@ -12,14 +12,25 @@ import {
   updatePostAdminAction,
 } from "@/features/admin/admin.actions";
 import { getAdminJourneys, getAdminPosts, getAdminUsers } from "@/features/admin/admin.server";
+import { AdminTestRunner } from "@/features/admin/components/AdminTestRunner";
 import { getCurrentProfile } from "@/features/profiles/profile.server";
 import { getCurrentUser } from "@/features/auth/auth.server";
 
-type AdminTab = "users" | "journeys" | "posts";
+type AdminTab = "users" | "journeys" | "posts" | "tests";
 
 function parseTab(tab: string | undefined): AdminTab {
-  if (tab === "journeys" || tab === "posts") return tab;
+  if (tab === "journeys" || tab === "posts" || tab === "tests") return tab;
   return "users";
+}
+
+function parseRoleFilter(value: string | undefined): "all" | "user" | "admin" {
+  if (value === "user" || value === "admin") return value;
+  return "all";
+}
+
+function parsePostStatusFilter(value: string | undefined): "all" | "draft" | "published" {
+  if (value === "draft" || value === "published") return value;
+  return "all";
 }
 
 function formatDate(value: string) {
@@ -76,12 +87,46 @@ async function deletePostFormAction(formData: FormData) {
 function UsersSection({
   users,
   currentUserId,
+  query,
+  role,
 }: {
   users: Awaited<ReturnType<typeof getAdminUsers>>;
   currentUserId: string;
+  query: string;
+  role: "all" | "user" | "admin";
 }) {
   return (
     <div className="space-y-4">
+      <form action="/admin" method="get" className="surface-card p-4 sm:p-5">
+        <input type="hidden" name="tab" value="users" />
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_auto_auto] md:items-center">
+          <input
+            type="text"
+            name="userQuery"
+            defaultValue={query}
+            placeholder="Search by username or email"
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          />
+          <select
+            name="userRole"
+            defaultValue={role}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="all">All roles</option>
+            <option value="user">Users only</option>
+            <option value="admin">Admins only</option>
+          </select>
+          <Button type="submit" size="sm">Search</Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin?tab=users">Clear</Link>
+          </Button>
+        </div>
+      </form>
+
+      {users.length === 0 ? (
+        <div className="surface-card p-6 text-center text-muted-foreground">No users found.</div>
+      ) : null}
+
       {users.map((user) => (
         <article key={user.id} className="surface-card p-4 sm:p-5">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -122,23 +167,24 @@ function UsersSection({
                 </form>
               )}
 
-              {user.status === "active" ? (
-                <form action={setUserStatusFormAction}>
-                  <input type="hidden" name="targetUserId" value={user.id} />
-                  <input type="hidden" name="nextStatus" value="banned" />
-                  <Button type="submit" size="sm" variant="outline" disabled={user.id === currentUserId}>
-                    Ban user
-                  </Button>
-                </form>
-              ) : (
-                <form action={setUserStatusFormAction}>
-                  <input type="hidden" name="targetUserId" value={user.id} />
-                  <input type="hidden" name="nextStatus" value="active" />
-                  <Button type="submit" size="sm" variant="outline">
-                    Unban user
-                  </Button>
-                </form>
-              )}
+              {!(user.role === "admin" && user.id !== currentUserId) &&
+                (user.status === "active" ? (
+                  <form action={setUserStatusFormAction}>
+                    <input type="hidden" name="targetUserId" value={user.id} />
+                    <input type="hidden" name="nextStatus" value="banned" />
+                    <Button type="submit" size="sm" variant="outline" disabled={user.id === currentUserId}>
+                      Ban user
+                    </Button>
+                  </form>
+                ) : (
+                  <form action={setUserStatusFormAction}>
+                    <input type="hidden" name="targetUserId" value={user.id} />
+                    <input type="hidden" name="nextStatus" value="active" />
+                    <Button type="submit" size="sm" variant="outline">
+                      Unban user
+                    </Button>
+                  </form>
+                ))}
 
               <form action={deleteUserFormAction}>
                 <input type="hidden" name="targetUserId" value={user.id} />
@@ -154,9 +200,36 @@ function UsersSection({
   );
 }
 
-function JourneysSection({ journeys }: { journeys: Awaited<ReturnType<typeof getAdminJourneys>> }) {
+function JourneysSection({
+  journeys,
+  query,
+}: {
+  journeys: Awaited<ReturnType<typeof getAdminJourneys>>;
+  query: string;
+}) {
   return (
     <div className="space-y-4">
+      <form action="/admin" method="get" className="surface-card p-4 sm:p-5">
+        <input type="hidden" name="tab" value="journeys" />
+        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+          <input
+            type="text"
+            name="journeyQuery"
+            defaultValue={query}
+            placeholder="Search by journey title or owner username"
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          />
+          <Button type="submit" size="sm">Search</Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin?tab=journeys">Clear</Link>
+          </Button>
+        </div>
+      </form>
+
+      {journeys.length === 0 ? (
+        <div className="surface-card p-6 text-center text-muted-foreground">No journeys found.</div>
+      ) : null}
+
       {journeys.map((journey) => (
         <article key={journey.id} className="surface-card p-4 sm:p-5 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -214,9 +287,47 @@ function JourneysSection({ journeys }: { journeys: Awaited<ReturnType<typeof get
   );
 }
 
-function PostsSection({ posts }: { posts: Awaited<ReturnType<typeof getAdminPosts>> }) {
+function PostsSection({
+  posts,
+  query,
+  status,
+}: {
+  posts: Awaited<ReturnType<typeof getAdminPosts>>;
+  query: string;
+  status: "all" | "draft" | "published";
+}) {
   return (
     <div className="space-y-4">
+      <form action="/admin" method="get" className="surface-card p-4 sm:p-5">
+        <input type="hidden" name="tab" value="posts" />
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_auto_auto] md:items-center">
+          <input
+            type="text"
+            name="postQuery"
+            defaultValue={query}
+            placeholder="Search by post title or author username"
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          />
+          <select
+            name="postStatus"
+            defaultValue={status}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+          </select>
+          <Button type="submit" size="sm">Search</Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin?tab=posts">Clear</Link>
+          </Button>
+        </div>
+      </form>
+
+      {posts.length === 0 ? (
+        <div className="surface-card p-6 text-center text-muted-foreground">No posts found.</div>
+      ) : null}
+
       {posts.map((post) => (
         <article key={post.id} className="surface-card p-4 sm:p-5 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -267,7 +378,14 @@ function PostsSection({ posts }: { posts: Awaited<ReturnType<typeof getAdminPost
 }
 
 interface AdminPageProps {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    userQuery?: string;
+    userRole?: string;
+    journeyQuery?: string;
+    postQuery?: string;
+    postStatus?: string;
+  }>;
 }
 
 export const metadata = {
@@ -288,12 +406,37 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const params = await searchParams;
   const tab = parseTab(params.tab);
+  const userQuery = params.userQuery?.trim() ?? "";
+  const userRole = parseRoleFilter(params.userRole);
+  const journeyQuery = params.journeyQuery?.trim() ?? "";
+  const postQuery = params.postQuery?.trim() ?? "";
+  const postStatus = parsePostStatusFilter(params.postStatus);
 
-  const [users, journeys, posts] = await Promise.all([
-    getAdminUsers(),
+  const [users, rawJourneys, rawPosts] = await Promise.all([
+    getAdminUsers({ query: userQuery, role: userRole }),
     getAdminJourneys(),
-    getAdminPosts(),
+    getAdminPosts({ status: postStatus }),
   ]);
+
+  const journeys = journeyQuery
+    ? rawJourneys.filter((journey) => {
+        const q = journeyQuery.toLowerCase();
+        return (
+          journey.title.toLowerCase().includes(q) ||
+          (journey.owner_username ?? "").toLowerCase().includes(q)
+        );
+      })
+    : rawJourneys;
+
+  const posts = postQuery
+    ? rawPosts.filter((post) => {
+        const q = postQuery.toLowerCase();
+        return (
+          post.title.toLowerCase().includes(q) ||
+          (post.author_username ?? "").toLowerCase().includes(q)
+        );
+      })
+    : rawPosts;
 
   return (
     <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl space-y-6">
@@ -307,12 +450,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <TabLink tab="users" activeTab={tab} label="Users" />
           <TabLink tab="journeys" activeTab={tab} label="Journeys" />
           <TabLink tab="posts" activeTab={tab} label="Posts" />
+          <TabLink tab="tests" activeTab={tab} label="Tests" />
         </div>
       </section>
 
-      {tab === "users" && <UsersSection users={users} currentUserId={user.id} />}
-      {tab === "journeys" && <JourneysSection journeys={journeys} />}
-      {tab === "posts" && <PostsSection posts={posts} />}
+      {tab === "users" && (
+        <UsersSection users={users} currentUserId={user.id} query={userQuery} role={userRole} />
+      )}
+      {tab === "journeys" && <JourneysSection journeys={journeys} query={journeyQuery} />}
+      {tab === "posts" && <PostsSection posts={posts} query={postQuery} status={postStatus} />}
+      {tab === "tests" && <AdminTestRunner />}
     </main>
   );
 }

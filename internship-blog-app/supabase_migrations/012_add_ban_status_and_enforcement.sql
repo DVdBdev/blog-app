@@ -39,6 +39,14 @@ BEGIN
     RAISE EXCEPTION 'Not allowed to change role or status';
   END IF;
 
+  IF public.is_admin()
+     AND auth.uid() <> OLD.id
+     AND OLD.role = 'admin'
+     AND NEW.status = 'banned'
+     AND NEW.status IS DISTINCT FROM OLD.status THEN
+    RAISE EXCEPTION 'Admins cannot ban other admins';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
