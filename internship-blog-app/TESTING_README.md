@@ -109,7 +109,7 @@ Buttons:
 
 Notes:
 - Admin-only (requires active admin account)
-- Production safety: test runner is disabled in production unless `ENABLE_ADMIN_TEST_RUNNER=true`
+- Production safety: test runner is disabled when `IS_PRODUCTION=true`
 - Output is shown in the dashboard panel
 
 ## What You Want To See (Healthy Results)
@@ -139,5 +139,5 @@ For security/setup:
 
 - If `vitest is not recognized`: run `npm install`
 - If Playwright browser is missing: run `npx playwright install`
-- If admin runner fails on production intentionally: set `ENABLE_ADMIN_TEST_RUNNER=true` only in trusted environment
+- If admin runner is blocked unexpectedly, verify `IS_PRODUCTION` is not set to `true` in your environment
 - If e2e is flaky: rerun once, then inspect output in the admin panel or terminal logs

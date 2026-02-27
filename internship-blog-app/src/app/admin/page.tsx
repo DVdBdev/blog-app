@@ -616,6 +616,7 @@ export const metadata = {
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
+  const isProduction = process.env.IS_PRODUCTION === "true";
 
   if (!user) {
     redirect("/login");
@@ -627,6 +628,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const params = await searchParams;
   const tab = parseTab(params.tab);
+
+  if (isProduction && tab === "tests") {
+    notFound();
+  }
   const userQuery = params.userQuery?.trim() ?? "";
   const userRole = parseRoleFilter(params.userRole);
   const journeyQuery = params.journeyQuery?.trim() ?? "";
@@ -675,7 +680,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <TabLink tab="journeys" activeTab={tab} label="Journeys" />
           <TabLink tab="posts" activeTab={tab} label="Posts" />
           <TabLink tab="moderation" activeTab={tab} label="Moderation" />
-          <TabLink tab="tests" activeTab={tab} label="Tests" />
+          {!isProduction ? <TabLink tab="tests" activeTab={tab} label="Tests" /> : null}
         </div>
       </section>
 
@@ -687,7 +692,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {tab === "moderation" && (
         <ModerationSection entries={moderationEntries} status={moderationStatus} query={moderationQuery} />
       )}
-      {tab === "tests" && <AdminTestRunner />}
+      {!isProduction && tab === "tests" && <AdminTestRunner />}
     </main>
   );
 }

@@ -305,8 +305,8 @@ export async function runAdminTestsAction(
     };
   }
 
-  const isEnabled = process.env.NODE_ENV !== "production" || process.env.ENABLE_ADMIN_TEST_RUNNER === "true";
-  if (!isEnabled) {
+  const isProduction = process.env.IS_PRODUCTION === "true";
+  if (isProduction) {
     return {
       status: "error",
       message: "Test runner is disabled in production",

@@ -4,6 +4,7 @@ import {
   deleteModerationLogAction,
   deleteAllUserContentFromModerationAction,
   deleteFlaggedContentFromModerationAction,
+  runAdminTestsAction,
   setModerationStatusAction,
   setUserStatusAction,
 } from "./admin.actions";
@@ -288,5 +289,54 @@ describe("setModerationStatusAction", () => {
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "dismissed", reviewed_by: "admin-1" }));
     expect(updateEqMock).toHaveBeenCalledWith("id", "log-2");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+});
+
+describe("runAdminTestsAction", () => {
+  const createClientMock = vi.mocked(createClient);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.IS_PRODUCTION;
+  });
+
+  it("rejects invalid test script names", async () => {
+    const formData = new FormData();
+    formData.set("script", "test:unknown");
+
+    const result = await runAdminTestsAction(
+      { status: "idle", message: "", output: "" },
+      formData
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Invalid test command",
+      output: "",
+    });
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("disables test runner when IS_PRODUCTION=true", async () => {
+    process.env.IS_PRODUCTION = "true";
+    const { supabase } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("script", "test");
+
+    const result = await runAdminTestsAction(
+      { status: "idle", message: "", output: "" },
+      formData
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Test runner is disabled in production",
+      output: "",
+    });
   });
 });
