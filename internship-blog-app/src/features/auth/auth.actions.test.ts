@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerUser } from "./auth.actions";
 import { createClient } from "@/services/supabase/server";
 import { checkUsernameTaken, createProfileForUser } from "@/features/profiles/profile.service";
+import { logModerationCandidateAsService } from "@/features/moderation/moderation.server";
 
 vi.mock("@/services/supabase/server", () => ({
   createClient: vi.fn(),
@@ -12,10 +13,15 @@ vi.mock("@/features/profiles/profile.service", () => ({
   createProfileForUser: vi.fn(),
 }));
 
+vi.mock("@/features/moderation/moderation.server", () => ({
+  logModerationCandidateAsService: vi.fn(async () => {}),
+}));
+
 describe("registerUser", () => {
   const createClientMock = vi.mocked(createClient);
   const checkUsernameTakenMock = vi.mocked(checkUsernameTaken);
   const createProfileForUserMock = vi.mocked(createProfileForUser);
+  const logModerationCandidateAsServiceMock = vi.mocked(logModerationCandidateAsService);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,5 +126,6 @@ describe("registerUser", () => {
 
     const result = await registerUser(formData);
     expect(result).toEqual({ success: true });
+    expect(logModerationCandidateAsServiceMock).toHaveBeenCalled();
   });
 });

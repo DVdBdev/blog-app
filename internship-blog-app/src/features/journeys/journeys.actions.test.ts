@@ -3,6 +3,7 @@ import { createJourney, deleteJourney, updateJourney } from "./journeys.actions"
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
+import { logModerationCandidate } from "@/features/moderation/moderation.server";
 
 vi.mock("@/services/supabase/server", () => ({
   createClient: vi.fn(),
@@ -14,6 +15,10 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/features/auth/account-status.server", () => ({
   requireActiveAccount: vi.fn(),
+}));
+
+vi.mock("@/features/moderation/moderation.server", () => ({
+  logModerationCandidate: vi.fn(async () => {}),
 }));
 
 function resolvedQuery<T>(result: T) {
@@ -31,6 +36,7 @@ describe("journeys actions", () => {
   const createClientMock = vi.mocked(createClient);
   const requireActiveAccountMock = vi.mocked(requireActiveAccount);
   const revalidatePathMock = vi.mocked(revalidatePath);
+  const logModerationCandidateMock = vi.mocked(logModerationCandidate);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,7 +53,10 @@ describe("journeys actions", () => {
   });
 
   it("createJourney: creates journey for active user", async () => {
-    const insertMock = vi.fn(async () => ({ error: null }));
+    const singleMock = vi.fn(async () => ({ data: { id: "j1" }, error: null }));
+    const insertMock = vi.fn(() => ({
+      select: vi.fn(() => ({ single: singleMock })),
+    }));
     createClientMock.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } }, error: null })) },
       from: vi.fn(() => ({ insert: insertMock })),
@@ -62,6 +71,7 @@ describe("journeys actions", () => {
     expect(result).toEqual({ success: true });
     expect(insertMock).toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/journeys");
+    expect(logModerationCandidateMock).toHaveBeenCalled();
   });
 
   it("updateJourney: updates owned journey for non-admin", async () => {

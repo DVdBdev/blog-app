@@ -59,16 +59,28 @@ npm run test:e2e:ui
 ## Test Inventory
 
 Unit/integration (`vitest`):
+- `src/features/admin/admin.server.test.ts`
+  - Validates moderation queue loading/search behavior.
 - `src/features/admin/admin.actions.test.ts`
   - Validates admin status updates: invalid status rejection, self-ban rejection, admin-ban rejection, successful non-admin status update.
+  - Validates moderation status action updates (`reviewed`, `dismissed`) for moderation queue entries.
+  - Validates moderation enforcement actions from queue (`ban user`, `delete flagged content`, `delete all user content`, `delete log`) including confirmation handling.
 - `src/features/auth/auth.actions.test.ts`
   - Validates register action: missing fields, username taken, auth failure, duplicate email case, profile creation failure, success case.
 - `src/features/auth/lib/validation.test.ts`
   - Validates email/password/username/confirm-password input rules and error messages.
 - `src/features/journeys/journeys.actions.test.ts`
   - Validates journey actions: auth checks, create success path, update ownership enforcement path, delete not-authorized path.
+- `src/features/moderation/moderation.lib.test.ts`
+  - Validates moderation keyword matching (including racist wording), custom env keyword matching, and rich-text content extraction helpers used for automatic logging.
+- `src/features/moderation/moderation.server.test.ts`
+  - Validates moderation log insertion behavior (clean content ignored, flagged content logged, service-role logging path, Hugging Face moderation result path, and local harmful-word fallback path).
+- `src/features/moderation/huggingface-moderation.test.ts`
+  - Validates Hugging Face moderation API integration paths (missing key, flagged response, clean response).
+- `src/features/moderation/huggingface-image-moderation.test.ts`
+  - Validates Hugging Face image moderation API integration paths (missing key, flagged image response, clean image response).
 - `src/features/posts/posts.actions.test.ts`
-  - Validates post actions: title validation, create success path, update path, delete not-authorized path.
+  - Validates post actions: title validation, create success path, update path, delete not-authorized path, embedded image moderation logging path.
 - `src/features/profiles/profile.actions.test.ts`
   - Validates profile action: unauthenticated rejection and successful update with revalidation.
 
@@ -80,7 +92,11 @@ End-to-end (`playwright`):
 - `e2e/authenticated.spec.ts`
   - Verifies authenticated flows using env credentials:
   - User can sign in and access `/journeys` and `/me`.
-  - Admin can sign in and access `/admin?tab=tests`.
+  - Logged-in user is redirected away from `/login` and `/register`.
+  - User can create and delete a journey with a post.
+  - Admin can sign in and access `/admin?tab=tests` and `/admin?tab=moderation`.
+  - Admin can ban a user and banned user is blocked from sign-in.
+  - Admin can review a flagged moderation queue item in moderation tab.
   - Test users are auto-created before tests and deleted in teardown.
 
 ## Admin Dashboard Test Runner

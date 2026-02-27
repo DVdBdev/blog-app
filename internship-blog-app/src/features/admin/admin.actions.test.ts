@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { setUserStatusAction } from "./admin.actions";
+import {
+  banUserFromModerationAction,
+  deleteModerationLogAction,
+  deleteAllUserContentFromModerationAction,
+  deleteFlaggedContentFromModerationAction,
+  setModerationStatusAction,
+  setUserStatusAction,
+} from "./admin.actions";
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -27,9 +34,12 @@ function buildSupabaseMock(args: {
   const selectMock = vi.fn(() => ({ eq: eqForSelectMock }));
   const updateEqMock = vi.fn(async () => ({ error: args.updateError ?? null }));
   const updateMock = vi.fn(() => ({ eq: updateEqMock }));
+  const deleteEqMock = vi.fn(async () => ({ error: null }));
+  const deleteMock = vi.fn(() => ({ eq: deleteEqMock }));
   const fromMock = vi.fn(() => ({
     select: selectMock,
     update: updateMock,
+    delete: deleteMock,
   }));
 
   const supabase = {
@@ -42,7 +52,7 @@ function buildSupabaseMock(args: {
     from: fromMock,
   };
 
-  return { supabase, updateMock, updateEqMock };
+  return { supabase, updateMock, updateEqMock, deleteEqMock };
 }
 
 describe("setUserStatusAction", () => {
@@ -123,5 +133,160 @@ describe("setUserStatusAction", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/users");
     expect(revalidatePathMock).toHaveBeenCalledWith("/search");
     expect(revalidatePathMock).toHaveBeenCalledWith("/journeys");
+  });
+});
+
+describe("moderation enforcement actions", () => {
+  const createClientMock = vi.mocked(createClient);
+  const revalidatePathMock = vi.mocked(revalidatePath);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requires confirmation for ban action", async () => {
+    const formData = new FormData();
+    formData.set("logId", "log-1");
+    formData.set("targetUserId", "user-1");
+
+    const result = await banUserFromModerationAction(formData);
+    expect(result).toEqual({ error: "Confirmation required before enforcement action" });
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("bans a user from moderation queue and marks action_taken", async () => {
+    const { supabase, updateEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [
+        { data: { id: "admin-1", role: "admin", status: "active" }, error: null },
+        { data: { id: "user-2", role: "user", status: "active" }, error: null },
+      ],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-1");
+    formData.set("targetUserId", "user-2");
+    formData.set("confirm", "yes");
+
+    const result = await banUserFromModerationAction(formData);
+    expect(result).toEqual({ success: true });
+    expect(updateEqMock).toHaveBeenCalledWith("id", "user-2");
+    expect(updateEqMock).toHaveBeenCalledWith("id", "log-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+
+  it("deletes flagged post content and marks action_taken", async () => {
+    const { supabase, deleteEqMock, updateEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-2");
+    formData.set("targetUserId", "user-2");
+    formData.set("contentType", "post_content");
+    formData.set("relatedEntityId", "post-9");
+    formData.set("confirm", "yes");
+
+    const result = await deleteFlaggedContentFromModerationAction(formData);
+    expect(result).toEqual({ success: true });
+    expect(deleteEqMock).toHaveBeenCalledWith("id", "post-9");
+    expect(updateEqMock).toHaveBeenCalledWith("id", "log-2");
+  });
+
+  it("deletes all user content and marks action_taken", async () => {
+    const { supabase, deleteEqMock, updateEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-3");
+    formData.set("targetUserId", "user-7");
+    formData.set("confirm", "yes");
+
+    const result = await deleteAllUserContentFromModerationAction(formData);
+    expect(result).toEqual({ success: true });
+    expect(deleteEqMock).toHaveBeenCalledWith("author_id", "user-7");
+    expect(deleteEqMock).toHaveBeenCalledWith("owner_id", "user-7");
+    expect(updateEqMock).toHaveBeenCalledWith("id", "log-3");
+  });
+
+  it("deletes moderation log entry after confirmation", async () => {
+    const { supabase, deleteEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-9");
+    formData.set("confirm", "yes");
+
+    const result = await deleteModerationLogAction(formData);
+    expect(result).toEqual({ success: true });
+    expect(deleteEqMock).toHaveBeenCalledWith("id", "log-9");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+});
+
+describe("setModerationStatusAction", () => {
+  const createClientMock = vi.mocked(createClient);
+  const revalidatePathMock = vi.mocked(revalidatePath);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects invalid moderation status request", async () => {
+    const formData = new FormData();
+    formData.set("logId", "log-1");
+    formData.set("nextStatus", "pending");
+
+    const result = await setModerationStatusAction(formData);
+
+    expect(result).toEqual({ error: "Invalid moderation status request" });
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("allows admin to mark moderation entry reviewed", async () => {
+    const { supabase, updateMock, updateEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-1");
+    formData.set("nextStatus", "reviewed");
+
+    const result = await setModerationStatusAction(formData);
+
+    expect(result).toEqual({ success: true });
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "reviewed", reviewed_by: "admin-1" }));
+    expect(updateEqMock).toHaveBeenCalledWith("id", "log-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+
+  it("allows admin to dismiss moderation entry", async () => {
+    const { supabase, updateMock, updateEqMock } = buildSupabaseMock({
+      authUserId: "admin-1",
+      maybeSingleResults: [{ data: { id: "admin-1", role: "admin", status: "active" }, error: null }],
+    });
+    createClientMock.mockResolvedValue(supabase as never);
+
+    const formData = new FormData();
+    formData.set("logId", "log-2");
+    formData.set("nextStatus", "dismissed");
+
+    const result = await setModerationStatusAction(formData);
+
+    expect(result).toEqual({ success: true });
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "dismissed", reviewed_by: "admin-1" }));
+    expect(updateEqMock).toHaveBeenCalledWith("id", "log-2");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
   });
 });

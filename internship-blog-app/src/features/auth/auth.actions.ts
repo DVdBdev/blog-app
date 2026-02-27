@@ -2,6 +2,7 @@
 
 import { createClient } from "@/services/supabase/server";
 import { createProfileForUser, checkUsernameTaken } from "@/features/profiles/profile.service";
+import { logModerationCandidateAsService } from "@/features/moderation/moderation.server";
 
 export async function registerUser(formData: FormData) {
   const email = formData.get("email") as string;
@@ -53,6 +54,13 @@ export async function registerUser(formData: FormData) {
     console.error("Failed to create profile:", profileError);
     return { error: "Account created, but failed to set up profile. Please contact support." };
   }
+
+  await logModerationCandidateAsService({
+    userId: authData.user.id,
+    contentType: "username",
+    relatedEntityId: authData.user.id,
+    text: username,
+  });
 
   return { success: true };
 }

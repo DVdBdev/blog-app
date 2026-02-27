@@ -32,6 +32,16 @@ test.describe("authenticated user flows", () => {
     await expect(page.getByRole("link", { name: "View public profile" })).toBeVisible();
   });
 
+  test("logged-in user is redirected away from login and register pages", async ({ page }) => {
+    await loginViaUi(page, userEmail!, userPassword!);
+
+    await page.goto("/login");
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.goto("/register");
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("user can create and delete a journey with a post", async ({ page }) => {
     const journeyTitle = `E2E Journey ${Date.now()}`;
     const postTitle = `E2E Post ${Date.now()}`;
@@ -43,7 +53,8 @@ test.describe("authenticated user flows", () => {
     const journeyDialog = page.getByRole("dialog");
     await journeyDialog.locator("#title").fill(journeyTitle);
     await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
-    await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).toBeVisible();
+    await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).toBeVisible({ timeout: 20000 });
 
     await page.getByRole("link", { name: `Open journey ${journeyTitle}` }).click();
     await page.waitForURL(/\/journeys\/.+/);
@@ -53,7 +64,8 @@ test.describe("authenticated user flows", () => {
     const postDialog = page.getByRole("dialog");
     await postDialog.locator("#title").fill(postTitle);
     await postDialog.getByRole("button", { name: "Save Post" }).click();
-    await expect(page.getByText("Post created successfully!")).toBeVisible();
+    await expect(postDialog).not.toBeVisible({ timeout: 25000 });
+    await expect(page.locator("a", { hasText: postTitle }).first()).toBeVisible({ timeout: 25000 });
 
     await page.locator("a", { hasText: postTitle }).first().click();
     await page.waitForURL(/\/posts\/.+/);
@@ -64,9 +76,9 @@ test.describe("authenticated user flows", () => {
     await page.waitForURL(/\/journeys\/.+/);
     await expect(page.getByText(postTitle)).not.toBeVisible();
 
-    await page.getByRole("button", { name: "Delete journey" }).first().click();
+    await page.getByLabel("Delete journey").click();
     await page.getByRole("button", { name: "Delete journey", exact: true }).click();
-    await page.waitForURL("/journeys");
+    await page.waitForURL(/\/journeys$/, { timeout: 20000 });
     await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).not.toBeVisible();
   });
 });
@@ -81,9 +93,15 @@ test.describe("admin flows", () => {
     await expect(page.getByRole("heading", { name: "Admin Dashboard" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Test Runner" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Run unit/integration tests" })).toBeVisible();
+
+    await page.goto("/admin?tab=moderation");
+    await expect(page.getByRole("link", { name: "Moderation" })).toBeVisible();
+    await expect(
+      page.getByPlaceholder("Search by user, reason, type, or preview")
+    ).toBeVisible();
   });
 
-  test("admin can ban user and banned user cannot sign in", async ({ page, context }) => {
+  test("admin can ban user and banned user cannot sign in", async ({ page, browser }) => {
     await loginViaUi(page, adminEmail!, adminPassword!);
     await page.goto("/admin?tab=users");
 
@@ -98,7 +116,8 @@ test.describe("admin flows", () => {
     await userRow.getByRole("button", { name: "Ban user" }).click();
     await expect(userRow.getByText("Banned")).toBeVisible();
 
-    const userPage = await context.newPage();
+    const userContext = await browser.newContext();
+    const userPage = await userContext.newPage();
     await userPage.goto("/login");
     await userPage.locator("#email").fill(userEmail!);
     await userPage.locator("#password").fill(userPassword!);
@@ -106,6 +125,52 @@ test.describe("admin flows", () => {
     await expect(
       userPage.getByText("Your account has been suspended. Contact support for assistance.")
     ).toBeVisible();
-    await userPage.close();
+    await userContext.close();
+  });
+
+  test("moderation queue item can be reviewed in moderation tab", async ({
+    page,
+    browser,
+  }) => {
+    const moderationToken = `e2e-spam-${Date.now()}`;
+    const flaggedJourneyTitle = `spam ${moderationToken}`;
+
+    await loginViaUi(page, adminEmail!, adminPassword!);
+    await page.goto("/admin?tab=users");
+    const userRow = page.locator("article", { hasText: "@e2e_user_auto" }).first();
+    await expect(userRow).toBeVisible();
+    if (await userRow.getByRole("button", { name: "Unban user" }).isVisible().catch(() => false)) {
+      await userRow.getByRole("button", { name: "Unban user" }).click();
+      await expect(userRow.getByText("Active")).toBeVisible();
+    }
+
+    const userContext = await browser.newContext();
+    const userPage = await userContext.newPage();
+    await loginViaUi(userPage, userEmail!, userPassword!);
+    await userPage.goto("/journeys");
+
+    await userPage.getByRole("button", { name: "Create Journey" }).click();
+    const journeyDialog = userPage.getByRole("dialog");
+    await journeyDialog.locator("#title").fill(flaggedJourneyTitle);
+    await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
+    const openJourneyLink = userPage.getByRole("link", { name: `Open journey ${flaggedJourneyTitle}` });
+    await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
+    await expect(openJourneyLink).toBeVisible({ timeout: 20000 });
+
+    await openJourneyLink.click();
+    await userPage.waitForURL(/\/journeys\/.+/);
+    await userPage.getByLabel("Delete journey").click();
+    await userPage.getByRole("button", { name: "Delete journey", exact: true }).click();
+    await userPage.waitForURL(/\/journeys$/, { timeout: 20000 });
+    await expect(userPage.getByRole("link", { name: `Open journey ${flaggedJourneyTitle}` })).not.toBeVisible();
+    await userContext.close();
+
+    await page.goto(`/admin?tab=moderation&moderationQuery=${encodeURIComponent(moderationToken)}`);
+    const moderationRow = page.locator("article", { hasText: moderationToken }).first();
+    await expect(moderationRow).toBeVisible();
+    await expect(moderationRow.getByText("pending", { exact: false })).toBeVisible();
+
+    await moderationRow.getByRole("button", { name: "Mark reviewed" }).click();
+    await expect(moderationRow.getByText("reviewed", { exact: false })).toBeVisible();
   });
 });
