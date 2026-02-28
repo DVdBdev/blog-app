@@ -4,7 +4,7 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { JourneyStatus, JourneyVisibility } from "@/types";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
-import { logModerationCandidate } from "@/features/moderation/moderation.server";
+import { enforceTextModerationOrBlock, logModerationCandidate } from "@/features/moderation/moderation.server";
 
 export interface CreateJourneyData {
   title: string;
@@ -30,6 +30,26 @@ export async function createJourney(data: CreateJourneyData) {
 
   if (!data.title || data.title.trim() === "") {
     return { error: "Title is required" };
+  }
+
+  const blockedTitle = await enforceTextModerationOrBlock({
+    userId: user.id,
+    contentType: "journey_title",
+    text: data.title,
+  });
+  if (blockedTitle) {
+    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  }
+
+  if (data.description?.trim()) {
+    const blockedDescription = await enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "journey_description",
+      text: data.description,
+    });
+    if (blockedDescription) {
+      return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
+    }
   }
 
   const { data: insertedJourney, error } = await supabase
@@ -99,6 +119,28 @@ export async function updateJourney(data: UpdateJourneyData) {
 
   if (!data.title || data.title.trim() === "") {
     return { error: "Title is required" };
+  }
+
+  const blockedTitle = await enforceTextModerationOrBlock({
+    userId: user.id,
+    contentType: "journey_title",
+    relatedEntityId: data.id,
+    text: data.title,
+  });
+  if (blockedTitle) {
+    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  }
+
+  if (data.description?.trim()) {
+    const blockedDescription = await enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "journey_description",
+      relatedEntityId: data.id,
+      text: data.description,
+    });
+    if (blockedDescription) {
+      return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
+    }
   }
 
   const { data: profile } = await supabase

@@ -5,6 +5,28 @@ interface HuggingFaceImageLabelScore {
   score?: number;
 }
 
+export interface HuggingFaceImageModerationLabel {
+  label: string;
+  normalizedLabel: string;
+  score: number;
+  unsafe: boolean;
+}
+
+export interface HuggingFaceImageModerationDetailedResult {
+  model: string;
+  labels: HuggingFaceImageModerationLabel[];
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === "AbortError") ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === 20)
+  );
+}
+
 function parseThreshold(): number {
   const parsed = Number(process.env.HUGGINGFACE_IMAGE_MODERATION_THRESHOLD ?? "0.7");
   if (Number.isNaN(parsed)) return 0.7;
@@ -34,24 +56,54 @@ function extractScores(payload: unknown): HuggingFaceImageLabelScore[] {
 export async function scanImageWithHuggingFaceModeration(
   imageUrl: string
 ): Promise<ModerationScanResult | null> {
+  const detailed = await scanImageWithHuggingFaceModerationDetailed(imageUrl);
+  if (!detailed) return null;
+
+  const threshold = parseThreshold();
+  const flaggedLabels = detailed.labels
+    .filter((entry) => entry.unsafe && entry.score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => `${entry.normalizedLabel} (${entry.score.toFixed(2)})`);
+
+  if (flaggedLabels.length === 0) return null;
+
+  return {
+    reason: `Hugging Face image moderation flagged labels: ${flaggedLabels.join(", ")}`,
+    preview: createModerationPreview(`Image URL: ${imageUrl}`),
+  };
+}
+
+function moderationRequestTimeoutMs(): number {
+  const parsed = Number(process.env.HUGGINGFACE_IMAGE_MODERATION_TIMEOUT_MS ?? "5000");
+  if (Number.isNaN(parsed) || parsed <= 0) return 5000;
+  return parsed;
+}
+
+export async function scanImageWithHuggingFaceModerationDetailed(
+  imageUrl: string
+): Promise<HuggingFaceImageModerationDetailedResult | null> {
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   if (!apiKey) return null;
 
-  const imageResponse = await fetch(imageUrl);
-  if (!imageResponse.ok) {
-    console.error("Failed to fetch image for moderation:", imageResponse.status, imageResponse.statusText);
-    return null;
-  }
-
-  const contentType = imageResponse.headers.get("content-type") ?? "application/octet-stream";
-  if (!contentType.startsWith("image/")) {
-    return null;
-  }
-
-  const model = process.env.HUGGINGFACE_IMAGE_MODERATION_MODEL ?? "Falconsai/nsfw_image_detection";
-  const threshold = parseThreshold();
-
+  const timeoutMs = moderationRequestTimeoutMs();
   try {
+    const imageController = new AbortController();
+    const imageTimeout = setTimeout(() => imageController.abort(), timeoutMs);
+    const imageResponse = await fetch(imageUrl, { signal: imageController.signal });
+    clearTimeout(imageTimeout);
+    if (!imageResponse.ok) {
+      console.error("Failed to fetch image for moderation:", imageResponse.status, imageResponse.statusText);
+      return null;
+    }
+
+    const contentType = imageResponse.headers.get("content-type") ?? "application/octet-stream";
+    if (!contentType.startsWith("image/")) {
+      return null;
+    }
+
+    const model = process.env.HUGGINGFACE_IMAGE_MODERATION_MODEL ?? "Falconsai/nsfw_image_detection";
+    const hfController = new AbortController();
+    const hfTimeout = setTimeout(() => hfController.abort(), timeoutMs);
     const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
       method: "POST",
       headers: {
@@ -59,7 +111,9 @@ export async function scanImageWithHuggingFaceModeration(
         "Content-Type": contentType,
       },
       body: await imageResponse.arrayBuffer(),
+      signal: hfController.signal,
     });
+    clearTimeout(hfTimeout);
 
     if (!response.ok) {
       console.error(
@@ -73,22 +127,25 @@ export async function scanImageWithHuggingFaceModeration(
     const json = (await response.json()) as unknown;
     const scores = extractScores(json);
 
-    const flaggedLabels = scores
-      .filter((entry) => {
-        const label = typeof entry.label === "string" ? entry.label : "";
+    const labels: HuggingFaceImageModerationLabel[] = scores
+      .map((entry) => {
+        const label = typeof entry.label === "string" ? entry.label : "unknown";
+        const normalizedLabel = normalizeLabel(label);
         const score = typeof entry.score === "number" ? entry.score : 0;
-        return isUnsafeImageLabel(label) && score >= threshold;
+        return {
+          label,
+          normalizedLabel,
+          score,
+          unsafe: isUnsafeImageLabel(label),
+        };
       })
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-      .map((entry) => `${normalizeLabel(entry.label ?? "unknown")} (${(entry.score ?? 0).toFixed(2)})`);
+      .sort((a, b) => b.score - a.score);
 
-    if (flaggedLabels.length === 0) return null;
-
-    return {
-      reason: `Hugging Face image moderation flagged labels: ${flaggedLabels.join(", ")}`,
-      preview: createModerationPreview(`Image URL: ${imageUrl}`),
-    };
+    return { model, labels };
   } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
     console.error("Hugging Face image moderation request error:", error);
     return null;
   }

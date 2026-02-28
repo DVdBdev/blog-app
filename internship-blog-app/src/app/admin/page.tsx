@@ -72,6 +72,22 @@ function formatContentType(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function formatModerationReason(reason: string | null) {
+  if (!reason) return null;
+
+  const normalized = reason.replace(/\s+/g, " ").trim();
+  const hasScore = /\((0(?:\.\d+)?|1(?:\.0+)?)\)/.test(normalized);
+  if (hasScore) {
+    return normalized.replace(/\((0(?:\.\d+)?|1(?:\.0+)?)\)/g, (_, raw: string) => {
+      const percent = Math.round(Number(raw) * 100);
+      return `(${raw} / ${percent}%)`;
+    });
+  }
+
+  // Local rule/fallback reasons do not carry model label scores.
+  return `${normalized} (local rule 1.00 / 100%)`;
+}
+
 function getModerationRelatedContentLink(
   entry: ModerationQueueItem
 ) {
@@ -523,6 +539,14 @@ function ModerationSection({
 
       {entries.map((entry) => {
         const isResolved = entry.status !== "pending";
+        const requiresRelatedEntityIdForDelete =
+          entry.content_type === "post_title" ||
+          entry.content_type === "post_content" ||
+          entry.content_type === "post_image" ||
+          entry.content_type === "journey_title" ||
+          entry.content_type === "journey_description";
+        const canDeleteFlaggedContent =
+          !requiresRelatedEntityIdForDelete || Boolean(entry.related_entity_id);
         return (
         <article key={entry.id} className="surface-card p-4 sm:p-5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -543,7 +567,9 @@ function ModerationSection({
               </p>
               <p className="text-sm">{entry.content_preview}</p>
               {entry.flag_reason ? (
-                <p className="text-xs text-muted-foreground">Reason: {entry.flag_reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  Reason: {formatModerationReason(entry.flag_reason)}
+                </p>
               ) : null}
               <Badge
                 variant={entry.status === "pending" ? "destructive" : "secondary"}
@@ -590,19 +616,21 @@ function ModerationSection({
                 }}
               />
 
-              <ModerationConfirmActionDialog
-                action={deleteFlaggedContentFromModerationFormAction}
-                title="Delete flagged content?"
-                description="This removes the specific content linked to this moderation item and marks this moderation entry as action_taken."
-                submitLabel="Delete flagged content"
-                disabled={isResolved}
-                hiddenFields={{
-                  logId: entry.id,
-                  targetUserId: entry.user_id,
-                  contentType: entry.content_type,
-                  relatedEntityId: entry.related_entity_id ?? "",
-                }}
-              />
+              {canDeleteFlaggedContent ? (
+                <ModerationConfirmActionDialog
+                  action={deleteFlaggedContentFromModerationFormAction}
+                  title="Delete flagged content?"
+                  description="This removes the specific content linked to this moderation item and marks this moderation entry as action_taken."
+                  submitLabel="Delete flagged content"
+                  disabled={isResolved}
+                  hiddenFields={{
+                    logId: entry.id,
+                    targetUserId: entry.user_id,
+                    contentType: entry.content_type,
+                    relatedEntityId: entry.related_entity_id ?? "",
+                  }}
+                />
+              ) : null}
 
               <ModerationConfirmActionDialog
                 action={deleteAllUserContentFromModerationFormAction}

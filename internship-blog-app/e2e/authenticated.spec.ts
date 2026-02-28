@@ -43,6 +43,8 @@ test.describe("authenticated user flows", () => {
   });
 
   test("user can create and delete a journey with a post", async ({ page }) => {
+    test.setTimeout(60_000);
+
     const journeyTitle = `E2E Journey ${Date.now()}`;
     const postTitle = `E2E Post ${Date.now()}`;
 
@@ -50,7 +52,7 @@ test.describe("authenticated user flows", () => {
     await page.goto("/journeys");
 
     await page.getByRole("button", { name: "Create Journey" }).click();
-    const journeyDialog = page.getByRole("dialog");
+    const journeyDialog = page.getByRole("dialog", { name: "Create a New Journey" });
     await journeyDialog.locator("#title").fill(journeyTitle);
     await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
     await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
@@ -61,7 +63,7 @@ test.describe("authenticated user flows", () => {
     await expect(page.getByRole("heading", { name: journeyTitle })).toBeVisible();
 
     await page.getByRole("button", { name: "Add Post" }).click();
-    const postDialog = page.getByRole("dialog");
+    const postDialog = page.getByRole("dialog", { name: "Create a New Post" });
     await postDialog.locator("#title").fill(postTitle);
     await postDialog.getByRole("button", { name: "Save Post" }).click();
     await expect(postDialog).not.toBeVisible({ timeout: 25000 });

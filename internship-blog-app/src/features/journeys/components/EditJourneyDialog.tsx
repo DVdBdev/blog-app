@@ -25,9 +25,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Pencil } from "lucide-react";
+import { ModerationBlockedDialog } from "@/features/moderation/components/ModerationBlockedDialog";
 
 interface EditJourneyDialogProps {
   journey: Journey;
+}
+
+interface ModerationBlockDetails {
+  reason: string;
+  confidence: number;
+  threshold: number;
+  labels: string[];
 }
 
 export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
@@ -35,6 +43,8 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
+  const [moderationBlock, setModerationBlock] = useState<ModerationBlockDetails | null>(null);
 
   const [formData, setFormData] = useState<UpdateJourneyData>({
     id: journey.id,
@@ -77,6 +87,10 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
       const result = await updateJourney(formData);
       if (result.error) {
         setError(result.error);
+        if ("moderationBlock" in result && result.moderationBlock) {
+          setModerationBlock(result.moderationBlock as ModerationBlockDetails);
+          setModerationDialogOpen(true);
+        }
       } else {
         setSuccess(true);
         setTimeout(() => {
@@ -192,6 +206,11 @@ export function EditJourneyDialog({ journey }: EditJourneyDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      <ModerationBlockedDialog
+        open={moderationDialogOpen}
+        onOpenChange={setModerationDialogOpen}
+        details={moderationBlock}
+      />
     </Dialog>
   );
 }

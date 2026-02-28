@@ -18,6 +18,8 @@ vi.mock("@/features/auth/account-status.server", () => ({
 }));
 
 vi.mock("@/features/moderation/moderation.server", () => ({
+  enforceTextModerationOrBlock: vi.fn(async () => null),
+  enforceImageModerationOrBlock: vi.fn(async () => null),
   logModerationCandidate: vi.fn(async () => {}),
   logImageModerationCandidate: vi.fn(async () => {}),
 }));

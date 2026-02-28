@@ -4,7 +4,12 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { PostStatus } from "@/types";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
-import { logImageModerationCandidate, logModerationCandidate } from "@/features/moderation/moderation.server";
+import {
+  enforceImageModerationOrBlock,
+  enforceTextModerationOrBlock,
+  logImageModerationCandidate,
+  logModerationCandidate,
+} from "@/features/moderation/moderation.server";
 import { extractImageUrlsFromRichText, extractRichTextContent } from "@/features/moderation/moderation.lib";
 
 export interface CreatePostData {
@@ -34,6 +39,39 @@ export async function createPost(data: CreatePostData) {
     return { error: "Title is required" };
   }
 
+  const blockedTitle = await enforceTextModerationOrBlock({
+    userId: user.id,
+    contentType: "post_title",
+    text: data.title,
+  });
+  if (blockedTitle) {
+    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  }
+
+  const createdPostText = extractRichTextContent(data.content);
+  if (createdPostText) {
+    const blockedContent = await enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "post_content",
+      text: createdPostText,
+    });
+    if (blockedContent) {
+      return { error: blockedContent.message, moderationBlock: blockedContent.details };
+    }
+  }
+
+  const createdPostImages = extractImageUrlsFromRichText(data.content);
+  for (const imageUrl of createdPostImages) {
+    const blockedImage = await enforceImageModerationOrBlock({
+      userId: user.id,
+      contentType: "post_image",
+      imageUrl,
+    });
+    if (blockedImage) {
+      return { error: blockedImage.message, moderationBlock: blockedImage.details };
+    }
+  }
+
   const { data: inserted, error } = await supabase
     .from("posts")
     .insert([
@@ -59,7 +97,6 @@ export async function createPost(data: CreatePostData) {
     relatedEntityId: inserted.id as string,
     text: data.title,
   });
-  const createdPostText = extractRichTextContent(data.content);
   if (createdPostText) {
     await logModerationCandidate({
       userId: user.id,
@@ -68,7 +105,6 @@ export async function createPost(data: CreatePostData) {
       text: createdPostText,
     });
   }
-  const createdPostImages = extractImageUrlsFromRichText(data.content);
   for (const imageUrl of createdPostImages) {
     await logImageModerationCandidate({
       userId: user.id,
@@ -108,6 +144,42 @@ export async function updatePost(data: UpdatePostData) {
     return { error: "Title is required" };
   }
 
+  const blockedTitle = await enforceTextModerationOrBlock({
+    userId: user.id,
+    contentType: "post_title",
+    relatedEntityId: data.id,
+    text: data.title,
+  });
+  if (blockedTitle) {
+    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  }
+
+  const updatedPostText = extractRichTextContent(data.content);
+  if (updatedPostText) {
+    const blockedContent = await enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "post_content",
+      relatedEntityId: data.id,
+      text: updatedPostText,
+    });
+    if (blockedContent) {
+      return { error: blockedContent.message, moderationBlock: blockedContent.details };
+    }
+  }
+
+  const updatedPostImages = extractImageUrlsFromRichText(data.content);
+  for (const imageUrl of updatedPostImages) {
+    const blockedImage = await enforceImageModerationOrBlock({
+      userId: user.id,
+      contentType: "post_image",
+      relatedEntityId: data.id,
+      imageUrl,
+    });
+    if (blockedImage) {
+      return { error: blockedImage.message, moderationBlock: blockedImage.details };
+    }
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -142,7 +214,6 @@ export async function updatePost(data: UpdatePostData) {
     relatedEntityId: data.id,
     text: data.title,
   });
-  const updatedPostText = extractRichTextContent(data.content);
   if (updatedPostText) {
     await logModerationCandidate({
       userId: user.id,
@@ -151,7 +222,6 @@ export async function updatePost(data: UpdatePostData) {
       text: updatedPostText,
     });
   }
-  const updatedPostImages = extractImageUrlsFromRichText(data.content);
   for (const imageUrl of updatedPostImages) {
     await logImageModerationCandidate({
       userId: user.id,

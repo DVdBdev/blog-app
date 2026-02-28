@@ -26,9 +26,17 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Pencil } from "lucide-react";
 import { RichTextEditor } from "./RichTextEditor";
+import { ModerationBlockedDialog } from "@/features/moderation/components/ModerationBlockedDialog";
 
 interface EditPostDialogProps {
   post: Post;
+}
+
+interface ModerationBlockDetails {
+  reason: string;
+  confidence: number;
+  threshold: number;
+  labels: string[];
 }
 
 function normalizeContent(value: unknown): Record<string, unknown> | null {
@@ -64,6 +72,8 @@ export function EditPostDialog({ post }: EditPostDialogProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
+  const [moderationBlock, setModerationBlock] = useState<ModerationBlockDetails | null>(null);
 
   const [formData, setFormData] = useState<UpdatePostData>({
     id: post.id,
@@ -138,6 +148,10 @@ export function EditPostDialog({ post }: EditPostDialogProps) {
       const result = await updatePost(payload);
       if (result.error) {
         setError(result.error);
+        if ("moderationBlock" in result && result.moderationBlock) {
+          setModerationBlock(result.moderationBlock as ModerationBlockDetails);
+          setModerationDialogOpen(true);
+        }
       } else {
         const savedContent = normalizeContent(result.post?.content);
         if (savedContent) {
@@ -250,6 +264,11 @@ export function EditPostDialog({ post }: EditPostDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      <ModerationBlockedDialog
+        open={moderationDialogOpen}
+        onOpenChange={setModerationDialogOpen}
+        details={moderationBlock}
+      />
     </Dialog>
   );
 }
