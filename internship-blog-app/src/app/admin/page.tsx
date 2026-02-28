@@ -107,6 +107,47 @@ function getModerationRelatedContentLink(
   return entry.username ? `/u/${entry.username}` : "/admin?tab=users";
 }
 
+function normalizeModerationText(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function resolveModerationRelatedEntityIds(
+  entries: ModerationQueueItem[],
+  posts: Awaited<ReturnType<typeof getAdminPosts>>,
+  journeys: Awaited<ReturnType<typeof getAdminJourneys>>
+): ModerationQueueItem[] {
+  return entries.map((entry) => {
+    if (entry.related_entity_id) return entry;
+
+    const preview = normalizeModerationText(entry.content_preview);
+    if (!preview) return entry;
+
+    if (entry.content_type === "post_title") {
+      const matches = posts.filter((post) => {
+        if (post.author_id !== entry.user_id) return false;
+        return normalizeModerationText(post.title) === preview;
+      });
+      if (matches.length === 1) {
+        return { ...entry, related_entity_id: matches[0].id };
+      }
+      return entry;
+    }
+
+    if (entry.content_type === "journey_title") {
+      const matches = journeys.filter((journey) => {
+        if (journey.owner_id !== entry.user_id) return false;
+        return normalizeModerationText(journey.title) === preview;
+      });
+      if (matches.length === 1) {
+        return { ...entry, related_entity_id: matches[0].id };
+      }
+      return entry;
+    }
+
+    return entry;
+  });
+}
+
 function TabLink({ tab, activeTab, label }: { tab: AdminTab; activeTab: AdminTab; label: string }) {
   return (
     <Button asChild variant={activeTab === tab ? "default" : "outline"} size="sm">
@@ -732,6 +773,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         );
       })
     : rawPosts;
+  const moderationEntriesWithResolvedIds = resolveModerationRelatedEntityIds(
+    moderationEntries,
+    rawPosts,
+    rawJourneys
+  );
 
   return (
     <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl space-y-6">
@@ -756,7 +802,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {tab === "journeys" && <JourneysSection journeys={journeys} query={journeyQuery} />}
       {tab === "posts" && <PostsSection posts={posts} query={postQuery} status={postStatus} />}
       {tab === "moderation" && (
-        <ModerationSection entries={moderationEntries} status={moderationStatus} query={moderationQuery} />
+        <ModerationSection entries={moderationEntriesWithResolvedIds} status={moderationStatus} query={moderationQuery} />
       )}
       {!isProduction && tab === "tests" && <AdminTestRunner />}
     </main>

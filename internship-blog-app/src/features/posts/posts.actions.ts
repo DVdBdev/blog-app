@@ -39,26 +39,23 @@ export async function createPost(data: CreatePostData) {
     return { error: "Title is required" };
   }
 
-  const blockedTitle = await enforceTextModerationOrBlock({
-    userId: user.id,
-    contentType: "post_title",
-    text: data.title,
-  });
-  if (blockedTitle) {
-    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
-  }
-
   const createdPostText = extractRichTextContent(data.content);
-  if (createdPostText) {
-    const blockedContent = await enforceTextModerationOrBlock({
+  const [blockedTitle, blockedContent] = await Promise.all([
+    enforceTextModerationOrBlock({
       userId: user.id,
-      contentType: "post_content",
-      text: createdPostText,
-    });
-    if (blockedContent) {
-      return { error: blockedContent.message, moderationBlock: blockedContent.details };
-    }
-  }
+      contentType: "post_title",
+      text: data.title,
+    }),
+    createdPostText
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "post_content",
+          text: createdPostText,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedContent) return { error: blockedContent.message, moderationBlock: blockedContent.details };
 
   const createdPostImages = extractImageUrlsFromRichText(data.content);
   for (const imageUrl of createdPostImages) {
@@ -91,27 +88,34 @@ export async function createPost(data: CreatePostData) {
     return { error: "Failed to create post" };
   }
 
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "post_title",
-    relatedEntityId: inserted.id as string,
-    text: data.title,
-  });
-  if (createdPostText) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "post_content",
+      contentType: "post_title",
       relatedEntityId: inserted.id as string,
-      text: createdPostText,
-    });
+      text: data.title,
+    }),
+  ];
+  if (createdPostText) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "post_content",
+        relatedEntityId: inserted.id as string,
+        text: createdPostText,
+      })
+    );
   }
   for (const imageUrl of createdPostImages) {
-    await logImageModerationCandidate({
-      userId: user.id,
-      relatedEntityId: inserted.id as string,
-      imageUrl,
-    });
+    moderationLogTasks.push(
+      logImageModerationCandidate({
+        userId: user.id,
+        relatedEntityId: inserted.id as string,
+        imageUrl,
+      })
+    );
   }
+  await Promise.allSettled(moderationLogTasks);
 
   revalidatePath(`/journeys/${data.journey_id}`);
   return { success: true, post: inserted };
@@ -144,28 +148,25 @@ export async function updatePost(data: UpdatePostData) {
     return { error: "Title is required" };
   }
 
-  const blockedTitle = await enforceTextModerationOrBlock({
-    userId: user.id,
-    contentType: "post_title",
-    relatedEntityId: data.id,
-    text: data.title,
-  });
-  if (blockedTitle) {
-    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
-  }
-
   const updatedPostText = extractRichTextContent(data.content);
-  if (updatedPostText) {
-    const blockedContent = await enforceTextModerationOrBlock({
+  const [blockedTitle, blockedContent] = await Promise.all([
+    enforceTextModerationOrBlock({
       userId: user.id,
-      contentType: "post_content",
+      contentType: "post_title",
       relatedEntityId: data.id,
-      text: updatedPostText,
-    });
-    if (blockedContent) {
-      return { error: blockedContent.message, moderationBlock: blockedContent.details };
-    }
-  }
+      text: data.title,
+    }),
+    updatedPostText
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "post_content",
+          relatedEntityId: data.id,
+          text: updatedPostText,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedContent) return { error: blockedContent.message, moderationBlock: blockedContent.details };
 
   const updatedPostImages = extractImageUrlsFromRichText(data.content);
   for (const imageUrl of updatedPostImages) {
@@ -208,27 +209,34 @@ export async function updatePost(data: UpdatePostData) {
     return { error: "Failed to update post" };
   }
 
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "post_title",
-    relatedEntityId: data.id,
-    text: data.title,
-  });
-  if (updatedPostText) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "post_content",
+      contentType: "post_title",
       relatedEntityId: data.id,
-      text: updatedPostText,
-    });
+      text: data.title,
+    }),
+  ];
+  if (updatedPostText) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "post_content",
+        relatedEntityId: data.id,
+        text: updatedPostText,
+      })
+    );
   }
   for (const imageUrl of updatedPostImages) {
-    await logImageModerationCandidate({
-      userId: user.id,
-      relatedEntityId: data.id,
-      imageUrl,
-    });
+    moderationLogTasks.push(
+      logImageModerationCandidate({
+        userId: user.id,
+        relatedEntityId: data.id,
+        imageUrl,
+      })
+    );
   }
+  await Promise.allSettled(moderationLogTasks);
 
   revalidatePath(`/posts/${data.id}`);
   return { success: true, post: updated };

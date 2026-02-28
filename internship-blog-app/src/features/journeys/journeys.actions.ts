@@ -32,25 +32,23 @@ export async function createJourney(data: CreateJourneyData) {
     return { error: "Title is required" };
   }
 
-  const blockedTitle = await enforceTextModerationOrBlock({
-    userId: user.id,
-    contentType: "journey_title",
-    text: data.title,
-  });
-  if (blockedTitle) {
-    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
-  }
-
-  if (data.description?.trim()) {
-    const blockedDescription = await enforceTextModerationOrBlock({
+  const description = data.description?.trim() ?? "";
+  const [blockedTitle, blockedDescription] = await Promise.all([
+    enforceTextModerationOrBlock({
       userId: user.id,
-      contentType: "journey_description",
-      text: data.description,
-    });
-    if (blockedDescription) {
-      return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
-    }
-  }
+      contentType: "journey_title",
+      text: data.title,
+    }),
+    description
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "journey_description",
+          text: description,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedDescription) return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
 
   const { data: insertedJourney, error } = await supabase
     .from("journeys")
@@ -58,7 +56,7 @@ export async function createJourney(data: CreateJourneyData) {
       {
         owner_id: user.id,
         title: data.title.trim(),
-        description: data.description?.trim() || null,
+        description: description || null,
         visibility: data.visibility,
         status: "active",
         completed_at: null,
@@ -73,20 +71,25 @@ export async function createJourney(data: CreateJourneyData) {
   }
 
   const journeyId = insertedJourney?.id as string;
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "journey_title",
-    relatedEntityId: journeyId,
-    text: data.title,
-  });
-  if (data.description?.trim()) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "journey_description",
+      contentType: "journey_title",
       relatedEntityId: journeyId,
-      text: data.description,
-    });
+      text: data.title,
+    }),
+  ];
+  if (description) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "journey_description",
+        relatedEntityId: journeyId,
+        text: description,
+      })
+    );
   }
+  await Promise.allSettled(moderationLogTasks);
 
   revalidatePath("/journeys");
   return { success: true };
@@ -121,27 +124,25 @@ export async function updateJourney(data: UpdateJourneyData) {
     return { error: "Title is required" };
   }
 
-  const blockedTitle = await enforceTextModerationOrBlock({
-    userId: user.id,
-    contentType: "journey_title",
-    relatedEntityId: data.id,
-    text: data.title,
-  });
-  if (blockedTitle) {
-    return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
-  }
-
-  if (data.description?.trim()) {
-    const blockedDescription = await enforceTextModerationOrBlock({
+  const description = data.description?.trim() ?? "";
+  const [blockedTitle, blockedDescription] = await Promise.all([
+    enforceTextModerationOrBlock({
       userId: user.id,
-      contentType: "journey_description",
+      contentType: "journey_title",
       relatedEntityId: data.id,
-      text: data.description,
-    });
-    if (blockedDescription) {
-      return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
-    }
-  }
+      text: data.title,
+    }),
+    description
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "journey_description",
+          relatedEntityId: data.id,
+          text: description,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedDescription) return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -155,7 +156,7 @@ export async function updateJourney(data: UpdateJourneyData) {
     .from("journeys")
     .update({
       title: data.title.trim(),
-      description: data.description?.trim() || null,
+      description: description || null,
       visibility: data.visibility,
       status: data.status,
       completed_at: data.status === "completed" ? (data.completed_at ?? new Date().toISOString()) : null,
@@ -173,20 +174,25 @@ export async function updateJourney(data: UpdateJourneyData) {
     return { error: "Failed to update journey" };
   }
 
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "journey_title",
-    relatedEntityId: data.id,
-    text: data.title,
-  });
-  if (data.description?.trim()) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "journey_description",
+      contentType: "journey_title",
       relatedEntityId: data.id,
-      text: data.description,
-    });
+      text: data.title,
+    }),
+  ];
+  if (description) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "journey_description",
+        relatedEntityId: data.id,
+        text: description,
+      })
+    );
   }
+  await Promise.allSettled(moderationLogTasks);
 
   revalidatePath(`/journeys/${data.id}`);
   revalidatePath("/journeys");

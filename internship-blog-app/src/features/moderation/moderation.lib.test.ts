@@ -18,6 +18,12 @@ describe("moderation.lib", () => {
     expect(result?.reason).toContain("hate speech");
   });
 
+  it("flags explicit profanity as abusive language", () => {
+    const result = scanTextForModeration("This is fucking shit.");
+    expect(result).not.toBeNull();
+    expect(result?.reason).toContain("abusive");
+  });
+
   it("flags configured custom keywords", () => {
     process.env.MODERATION_EXTRA_KEYWORDS = "custombadword";
     const result = scanTextForModeration("This has custombadword in it.");
