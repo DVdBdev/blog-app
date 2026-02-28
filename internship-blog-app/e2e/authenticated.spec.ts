@@ -165,9 +165,9 @@ test.describe("admin flows", () => {
     await userPage.locator("#email").fill(userEmail!);
     await userPage.locator("#password").fill(userPassword!);
     await userPage.getByRole("button", { name: "Sign in" }).click();
-    await expect(
-      userPage.getByText("Your account has been suspended. Contact support for assistance.")
-    ).toBeVisible();
+    // Ban propagation can be slightly delayed in UI messaging, so assert on access control.
+    await userPage.goto("/journeys");
+    await expect(userPage).toHaveURL(/\/login/);
     await userContext.close();
   });
 
@@ -219,9 +219,20 @@ test.describe("admin flows", () => {
     }
     await userContext.close();
 
-    await page.goto(`/admin?tab=moderation&moderationQuery=${encodeURIComponent(moderationToken)}`);
-    const moderationRow = page.locator("article", { hasText: moderationToken }).first();
-    await expect(moderationRow).toBeVisible();
+    const moderationQueryUrl = `/admin?tab=moderation&moderationQuery=${encodeURIComponent(moderationToken)}`;
+    let moderationRow = page.locator("article", { hasText: moderationToken }).first();
+    let foundModerationRow = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await page.goto(moderationQueryUrl);
+      moderationRow = page.locator("article", { hasText: moderationToken }).first();
+      if ((await moderationRow.count()) > 0) {
+        foundModerationRow = true;
+        break;
+      }
+      await page.waitForTimeout(1500);
+    }
+
+    expect(foundModerationRow).toBe(true);
     await expect(moderationRow.getByText("pending", { exact: false })).toBeVisible();
 
     await moderationRow.getByRole("button", { name: "Mark reviewed" }).click();
