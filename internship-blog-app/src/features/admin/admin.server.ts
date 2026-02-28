@@ -60,9 +60,46 @@ export interface AdminPostsFilter {
 export interface ModerationQueueFilter {
   status?: ModerationStatus | "all";
   query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ModerationQueuePage {
+  entries: ModerationQueueItem[];
+  page: number;
+  pageSize: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  totalCount: number | null;
+}
+
+const ADMIN_PERF_LOGS_ENABLED = process.env.ADMIN_PERF_LOGS === "true";
+
+function perfStart() {
+  return process.hrtime.bigint();
+}
+
+function perfEnd(label: string, startedAt: bigint, meta?: Record<string, string | number | boolean | null>) {
+  if (!ADMIN_PERF_LOGS_ENABLED) return;
+  const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+  const metaSuffix = meta ? ` ${JSON.stringify(meta)}` : "";
+  console.info(`[admin-perf] ${label} ${durationMs.toFixed(1)}ms${metaSuffix}`);
+}
+
+function clampPositiveInt(value: number | undefined, fallback: number) {
+  if (!value || Number.isNaN(value) || value < 1) return fallback;
+  return Math.floor(value);
+}
+
+function normalizeModerationPageInput(filter: ModerationQueueFilter) {
+  const page = clampPositiveInt(filter.page, 1);
+  const pageSizeRaw = clampPositiveInt(filter.pageSize, 25);
+  const pageSize = Math.max(10, Math.min(100, pageSizeRaw));
+  return { page, pageSize };
 }
 
 export async function getAdminUsers(filter: AdminUsersFilter = {}): Promise<AdminUserRow[]> {
+  const startedAt = perfStart();
   const supabase = await createClient();
   const queryText = filter.query?.trim();
   const roleFilter = filter.role ?? "all";
@@ -84,13 +121,17 @@ export async function getAdminUsers(filter: AdminUsersFilter = {}): Promise<Admi
 
   if (error) {
     console.error("Error loading admin users:", error);
+    perfEnd("getAdminUsers", startedAt, { ok: false });
     return [];
   }
 
-  return (data ?? []) as AdminUserRow[];
+  const result = (data ?? []) as AdminUserRow[];
+  perfEnd("getAdminUsers", startedAt, { ok: true, count: result.length });
+  return result;
 }
 
 export async function getAdminJourneys(filter: AdminJourneysFilter = {}): Promise<AdminJourneyRow[]> {
+  const startedAt = perfStart();
   const supabase = await createClient();
   const queryText = filter.query?.trim();
 
@@ -107,10 +148,11 @@ export async function getAdminJourneys(filter: AdminJourneysFilter = {}): Promis
 
   if (error) {
     console.error("Error loading admin journeys:", error);
+    perfEnd("getAdminJourneys", startedAt, { ok: false });
     return [];
   }
 
-  return (data ?? []).map((journey) => ({
+  const result = (data ?? []).map((journey) => ({
     id: journey.id as string,
     title: journey.title as string,
     visibility: journey.visibility as "public" | "unlisted" | "private",
@@ -120,9 +162,12 @@ export async function getAdminJourneys(filter: AdminJourneysFilter = {}): Promis
     owner_username:
       (journey.profiles as { username?: string | null } | null)?.username ?? null,
   }));
+  perfEnd("getAdminJourneys", startedAt, { ok: true, count: result.length });
+  return result;
 }
 
 export async function getAdminPosts(filter: AdminPostsFilter = {}): Promise<AdminPostRow[]> {
+  const startedAt = perfStart();
   const supabase = await createClient();
   const queryText = filter.query?.trim();
   const statusFilter = filter.status ?? "all";
@@ -144,10 +189,11 @@ export async function getAdminPosts(filter: AdminPostsFilter = {}): Promise<Admi
 
   if (error) {
     console.error("Error loading admin posts:", error);
+    perfEnd("getAdminPosts", startedAt, { ok: false });
     return [];
   }
 
-  return (data ?? []).map((post) => ({
+  const result = (data ?? []).map((post) => ({
     id: post.id as string,
     title: post.title as string,
     status: post.status as "draft" | "published",
@@ -158,6 +204,8 @@ export async function getAdminPosts(filter: AdminPostsFilter = {}): Promise<Admi
     author_username:
       (post.profiles as { username?: string | null } | null)?.username ?? null,
   }));
+  perfEnd("getAdminPosts", startedAt, { ok: true, count: result.length });
+  return result;
 }
 
 function mapModerationEntries(rows: unknown[]): ModerationQueueItem[] {
@@ -204,9 +252,12 @@ function applyModerationQuery(entries: ModerationQueueItem[], rawQuery: string |
   });
 }
 
-export async function getModerationQueue(filter: ModerationQueueFilter = {}): Promise<ModerationQueueItem[]> {
+export async function getModerationQueue(filter: ModerationQueueFilter = {}): Promise<ModerationQueuePage> {
+  const startedAt = perfStart();
   const supabase = await createClient();
   const statusFilter = filter.status ?? "all";
+  const queryText = filter.query?.trim() ?? "";
+  const { page, pageSize } = normalizeModerationPageInput(filter);
 
   let query = supabase
     .from("moderation_log")
@@ -217,12 +268,79 @@ export async function getModerationQueue(filter: ModerationQueueFilter = {}): Pr
     query = query.eq("status", statusFilter);
   }
 
+  // If a search query is present, keep full filtering behavior (including username),
+  // then paginate in memory. Without search query, paginate at DB level.
+  if (!queryText) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize;
+    const { data, error } = await query.range(from, to);
+
+    if (error) {
+      console.error("Error loading moderation queue:", error);
+      perfEnd("getModerationQueue", startedAt, { ok: false, page, pageSize, query: false });
+      return {
+        entries: [],
+        page,
+        pageSize,
+        hasPreviousPage: page > 1,
+        hasNextPage: false,
+        totalCount: null,
+      };
+    }
+
+    const rows = mapModerationEntries(data ?? []);
+    const hasNextPage = rows.length > pageSize;
+    const entries = hasNextPage ? rows.slice(0, pageSize) : rows;
+    perfEnd("getModerationQueue", startedAt, {
+      ok: true,
+      page,
+      pageSize,
+      query: false,
+      count: entries.length,
+    });
+    return {
+      entries,
+      page,
+      pageSize,
+      hasPreviousPage: page > 1,
+      hasNextPage,
+      totalCount: null,
+    };
+  }
+
   const { data, error } = await query;
 
   if (error) {
     console.error("Error loading moderation queue:", error);
-    return [];
+    perfEnd("getModerationQueue", startedAt, { ok: false, page, pageSize, query: true });
+    return {
+      entries: [],
+      page,
+      pageSize,
+      hasPreviousPage: page > 1,
+      hasNextPage: false,
+      totalCount: 0,
+    };
   }
 
-  return applyModerationQuery(mapModerationEntries(data ?? []), filter.query);
+  const filtered = applyModerationQuery(mapModerationEntries(data ?? []), queryText);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize;
+  const entries = filtered.slice(from, to);
+  const hasNextPage = filtered.length > to;
+  perfEnd("getModerationQueue", startedAt, {
+    ok: true,
+    page,
+    pageSize,
+    query: true,
+    count: entries.length,
+  });
+  return {
+    entries,
+    page,
+    pageSize,
+    hasPreviousPage: page > 1,
+    hasNextPage,
+    totalCount: filtered.length,
+  };
 }

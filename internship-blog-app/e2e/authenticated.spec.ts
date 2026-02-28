@@ -83,6 +83,47 @@ test.describe("authenticated user flows", () => {
     await page.waitForURL(/\/journeys$/, { timeout: 20000 });
     await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).not.toBeVisible();
   });
+
+  test("user sees moderation blocked modal when creating an unsafe post", async ({ page }) => {
+    test.setTimeout(60_000);
+
+    const journeyTitle = `E2E Journey Blocked Post ${Date.now()}`;
+    const blockedPostTitle = `fucking shit ${Date.now()}`;
+
+    await loginViaUi(page, userEmail!, userPassword!);
+    await page.goto("/journeys");
+
+    await page.getByRole("button", { name: "Create Journey" }).click();
+    const journeyDialog = page.getByRole("dialog", { name: "Create a New Journey" });
+    await journeyDialog.locator("#title").fill(journeyTitle);
+    await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
+    await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
+    const openJourneyLink = page.getByRole("link", { name: `Open journey ${journeyTitle}` });
+    await expect(openJourneyLink).toBeVisible({ timeout: 20000 });
+
+    await openJourneyLink.click();
+    await page.waitForURL(/\/journeys\/.+/);
+
+    await page.getByRole("button", { name: "Add Post" }).click();
+    const postDialog = page.getByRole("dialog", { name: "Create a New Post" });
+    await postDialog.locator("#title").fill(blockedPostTitle);
+    await postDialog.getByRole("button", { name: "Save Post" }).click();
+
+    const blockedDialog = page.getByRole("dialog", { name: "Content Blocked" });
+    await expect(blockedDialog).toBeVisible({ timeout: 20000 });
+    await expect(blockedDialog.getByText("Your content was not saved because it triggered moderation thresholds.")).toBeVisible();
+    await blockedDialog.getByRole("button", { name: "OK" }).click();
+    await expect(blockedDialog).not.toBeVisible({ timeout: 10000 });
+
+    await postDialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(postDialog).not.toBeVisible({ timeout: 10000 });
+    await expect(page.locator("a", { hasText: blockedPostTitle }).first()).not.toBeVisible();
+
+    await page.getByLabel("Delete journey").click();
+    await page.getByRole("button", { name: "Delete journey", exact: true }).click();
+    await page.waitForURL(/\/journeys$/, { timeout: 20000 });
+    await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).not.toBeVisible();
+  });
 });
 
 test.describe("admin flows", () => {

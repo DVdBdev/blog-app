@@ -11,6 +11,13 @@ export interface ModerationBlockDetails {
   labels: string[];
 }
 
+const MODERATION_DEBUG_LOGS = process.env.MODERATION_DEBUG_LOGS === "true";
+
+function debugModerationLog(event: string, payload: Record<string, string | number | boolean | null>) {
+  if (!MODERATION_DEBUG_LOGS) return;
+  console.info(`[moderation-debug] ${event} ${JSON.stringify(payload)}`);
+}
+
 function parseThreshold(value: string | undefined, fallback: number) {
   const parsed = Number(value ?? `${fallback}`);
   if (Number.isNaN(parsed)) return fallback;
@@ -47,7 +54,23 @@ export async function getTextModerationBlockDetails(
   const hfDetailed = await scanTextWithHuggingFaceModerationDetailed(text);
 
   if (!hfDetailed) {
-    if (!localScan) return null;
+    if (!localScan) {
+      debugModerationLog("text_block", {
+        contentType,
+        source: "huggingface_unavailable",
+        blocked: false,
+        confidence: 0,
+        threshold: generalTextThreshold(),
+      });
+      return null;
+    }
+    debugModerationLog("text_block", {
+      contentType,
+      source: "local_fallback",
+      blocked: true,
+      confidence: 1,
+      threshold: 1,
+    });
     return {
       contentType,
       source: "text",
@@ -70,6 +93,13 @@ export async function getTextModerationBlockDetails(
     .sort((a, b) => b.score - a.score);
 
   if (matched.length === 0) {
+    debugModerationLog("text_block", {
+      contentType,
+      source: "huggingface",
+      blocked: false,
+      confidence: 0,
+      threshold: general,
+    });
     return null;
   }
 
@@ -77,6 +107,13 @@ export async function getTextModerationBlockDetails(
   const threshold = isSevereLabel(strongest.normalizedLabel) ? severe : general;
   const labels = matched.map((entry) => `${entry.normalizedLabel} (${entry.score.toFixed(2)})`);
 
+  debugModerationLog("text_block", {
+    contentType,
+    source: "huggingface",
+    blocked: true,
+    confidence: strongest.score,
+    threshold,
+  });
   return {
     contentType,
     source: "text",
@@ -92,17 +129,42 @@ export async function getImageModerationBlockDetails(
   imageUrl: string
 ): Promise<ModerationBlockDetails | null> {
   const hfDetailed = await scanImageWithHuggingFaceModerationDetailed(imageUrl);
-  if (!hfDetailed) return null;
+  if (!hfDetailed) {
+    debugModerationLog("image_block", {
+      contentType,
+      source: "huggingface_unavailable",
+      blocked: false,
+      confidence: 0,
+      threshold: imageThreshold(),
+    });
+    return null;
+  }
 
   const threshold = imageThreshold();
   const matched = hfDetailed.labels
     .filter((entry) => entry.unsafe && entry.score >= threshold)
     .sort((a, b) => b.score - a.score);
 
-  if (matched.length === 0) return null;
+  if (matched.length === 0) {
+    debugModerationLog("image_block", {
+      contentType,
+      source: "huggingface",
+      blocked: false,
+      confidence: 0,
+      threshold,
+    });
+    return null;
+  }
 
   const labels = matched.map((entry) => `${entry.normalizedLabel} (${entry.score.toFixed(2)})`);
 
+  debugModerationLog("image_block", {
+    contentType,
+    source: "huggingface",
+    blocked: true,
+    confidence: matched[0].score,
+    threshold,
+  });
   return {
     contentType,
     source: "image",

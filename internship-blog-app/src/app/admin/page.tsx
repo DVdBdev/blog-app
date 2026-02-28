@@ -22,6 +22,7 @@ import {
   getAdminPosts,
   getAdminUsers,
   getModerationQueue,
+  type ModerationQueuePage,
   type ModerationQueueItem,
 } from "@/features/admin/admin.server";
 import { AdminTestRunner } from "@/features/admin/components/AdminTestRunner";
@@ -58,6 +59,12 @@ function parseModerationStatusFilter(
 ): "all" | "pending" | "reviewed" | "dismissed" | "action_taken" {
   if (value === "pending" || value === "reviewed" || value === "dismissed" || value === "action_taken") return value;
   return "all";
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value ?? `${fallback}`);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.floor(parsed);
 }
 
 function formatDate(value: string) {
@@ -518,15 +525,24 @@ function PostsSection({
 }
 
 function ModerationSection({
-  entries,
+  queue,
   status,
   query,
 }: {
-  entries: ModerationQueueItem[];
+  queue: ModerationQueuePage;
   status: "all" | "pending" | "reviewed" | "dismissed" | "action_taken";
   query: string;
 }) {
+  const { entries, page, hasPreviousPage, hasNextPage } = queue;
   const bulkFormId = "moderation-bulk-action-form";
+  const createModerationPageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    params.set("tab", "moderation");
+    if (status !== "all") params.set("moderationStatus", status);
+    if (query) params.set("moderationQuery", query);
+    params.set("moderationPage", String(nextPage));
+    return `/admin?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -576,6 +592,32 @@ function ModerationSection({
             </Button>
           </div>
         </form>
+      ) : null}
+
+      {entries.length > 0 ? (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>Page {page}</span>
+          <div className="flex gap-2">
+            {hasPreviousPage ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={createModerationPageHref(Math.max(1, page - 1))}>Previous</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                Previous
+              </Button>
+            )}
+            {hasNextPage ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={createModerationPageHref(page + 1)}>Next</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                Next
+              </Button>
+            )}
+          </div>
+        </div>
       ) : null}
 
       {entries.map((entry) => {
@@ -713,6 +755,7 @@ interface AdminPageProps {
     postStatus?: string;
     moderationStatus?: string;
     moderationQuery?: string;
+    moderationPage?: string;
   }>;
 }
 
@@ -746,12 +789,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const postStatus = parsePostStatusFilter(params.postStatus);
   const moderationStatus = parseModerationStatusFilter(params.moderationStatus);
   const moderationQuery = params.moderationQuery?.trim() ?? "";
+  const moderationPage = parsePositiveInt(params.moderationPage, 1);
 
-  const [users, rawJourneys, rawPosts, moderationEntries] = await Promise.all([
+  const [users, rawJourneys, rawPosts, moderationQueue] = await Promise.all([
     getAdminUsers({ query: userQuery, role: userRole }),
     getAdminJourneys(),
     getAdminPosts({ status: postStatus }),
-    getModerationQueue({ status: moderationStatus, query: moderationQuery }),
+    getModerationQueue({ status: moderationStatus, query: moderationQuery, page: moderationPage, pageSize: 25 }),
   ]);
 
   const journeys = journeyQuery
@@ -774,10 +818,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       })
     : rawPosts;
   const moderationEntriesWithResolvedIds = resolveModerationRelatedEntityIds(
-    moderationEntries,
+    moderationQueue.entries,
     rawPosts,
     rawJourneys
   );
+  const moderationQueueWithResolvedIds: ModerationQueuePage = {
+    ...moderationQueue,
+    entries: moderationEntriesWithResolvedIds,
+  };
 
   return (
     <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl space-y-6">
@@ -802,7 +850,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {tab === "journeys" && <JourneysSection journeys={journeys} query={journeyQuery} />}
       {tab === "posts" && <PostsSection posts={posts} query={postQuery} status={postStatus} />}
       {tab === "moderation" && (
-        <ModerationSection entries={moderationEntriesWithResolvedIds} status={moderationStatus} query={moderationQuery} />
+        <ModerationSection queue={moderationQueueWithResolvedIds} status={moderationStatus} query={moderationQuery} />
       )}
       {!isProduction && tab === "tests" && <AdminTestRunner />}
     </main>

@@ -12,6 +12,12 @@ export interface CreateJourneyData {
   visibility: JourneyVisibility;
 }
 
+function runModerationLogsInBackground(tasks: Array<Promise<void>>) {
+  void Promise.allSettled(tasks).catch((error) => {
+    console.error("Background moderation logging failed:", error);
+  });
+}
+
 export async function createJourney(data: CreateJourneyData) {
   const supabase = await createClient();
   const {
@@ -89,7 +95,7 @@ export async function createJourney(data: CreateJourneyData) {
       })
     );
   }
-  await Promise.allSettled(moderationLogTasks);
+  runModerationLogsInBackground(moderationLogTasks);
 
   revalidatePath("/journeys");
   return { success: true };
@@ -192,7 +198,7 @@ export async function updateJourney(data: UpdateJourneyData) {
       })
     );
   }
-  await Promise.allSettled(moderationLogTasks);
+  runModerationLogsInBackground(moderationLogTasks);
 
   revalidatePath(`/journeys/${data.id}`);
   revalidatePath("/journeys");
