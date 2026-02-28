@@ -20,9 +20,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Pencil, Upload, ImagePlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ModerationBlockedDialog } from "@/features/moderation/components/ModerationBlockedDialog";
 
 interface EditProfileModalProps {
   profile: Profile;
+}
+
+interface ModerationBlockDetails {
+  reason: string;
+  confidence: number;
+  threshold: number;
+  labels: string[];
 }
 
 const PROFILE_PICTURES_BUCKET = "profile-pictures";
@@ -34,6 +42,8 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
+  const [moderationBlock, setModerationBlock] = useState<ModerationBlockDetails | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
@@ -223,6 +233,10 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
       const result = await updateProfile(payload);
       if (result.error) {
         setError(result.error);
+        if ("moderationBlock" in result && result.moderationBlock) {
+          setModerationBlock(result.moderationBlock as ModerationBlockDetails);
+          setModerationDialogOpen(true);
+        }
       } else {
         setSuccess(true);
         setTimeout(() => {
@@ -508,6 +522,11 @@ export function EditProfileModal({ profile }: EditProfileModalProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      <ModerationBlockedDialog
+        open={moderationDialogOpen}
+        onOpenChange={setModerationDialogOpen}
+        details={moderationBlock}
+      />
     </Dialog>
   );
 }

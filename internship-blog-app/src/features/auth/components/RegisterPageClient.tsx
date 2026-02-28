@@ -8,6 +8,14 @@ import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthMessage } from "@/features/auth/components/AuthMessage";
 import { validateEmail, validatePassword, validateUsername, validateConfirmPassword } from "@/features/auth/lib/validation";
 import { Button } from "@/components/ui/button";
+import { ModerationBlockedDialog } from "@/features/moderation/components/ModerationBlockedDialog";
+
+interface ModerationBlockDetails {
+  reason: string;
+  confidence: number;
+  threshold: number;
+  labels: string[];
+}
 
 export function RegisterPageClient() {
   const [email, setEmail] = useState("");
@@ -18,6 +26,8 @@ export function RegisterPageClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
+  const [moderationBlock, setModerationBlock] = useState<ModerationBlockDetails | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     username?: string;
@@ -58,6 +68,10 @@ export function RegisterPageClient() {
 
       if (result.error) {
         setError(result.error);
+        if ("moderationBlock" in result && result.moderationBlock) {
+          setModerationBlock(result.moderationBlock as ModerationBlockDetails);
+          setModerationDialogOpen(true);
+        }
         return;
       }
 
@@ -142,6 +156,11 @@ export function RegisterPageClient() {
           </Button>
         </form>
       </AuthCard>
+      <ModerationBlockedDialog
+        open={moderationDialogOpen}
+        onOpenChange={setModerationDialogOpen}
+        details={moderationBlock}
+      />
     </main>
   );
 }

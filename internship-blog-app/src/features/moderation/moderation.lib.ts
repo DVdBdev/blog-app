@@ -24,6 +24,8 @@ const FLAG_RULES: Array<{ regex: RegExp; reason: string }> = [
   { regex: /\bethnic\s+cleansing\b/i, reason: "Potential hate speech language" },
   { regex: /\bviolence\b/i, reason: "Potential violent language" },
   { regex: /\babuse\b/i, reason: "Potential abusive language" },
+  { regex: /\bfuck(?:ing|er|ed|s)?\b/i, reason: "Potential abusive language" },
+  { regex: /\bshit(?:ty|s)?\b/i, reason: "Potential abusive language" },
 ];
 
 function normalizeForModeration(text: string): string {

@@ -3,6 +3,7 @@
 import { createClient } from "@/services/supabase/server";
 import { createProfileForUser, checkUsernameTaken } from "@/features/profiles/profile.service";
 import { logModerationCandidateAsService } from "@/features/moderation/moderation.server";
+import { getTextModerationBlockDetails } from "@/features/moderation/moderation.policy";
 
 export async function registerUser(formData: FormData) {
   const email = formData.get("email") as string;
@@ -17,6 +18,16 @@ export async function registerUser(formData: FormData) {
   const isTaken = await checkUsernameTaken(username);
   if (isTaken) {
     return { error: "Username is already taken" };
+  }
+
+  const blockedUsername = await getTextModerationBlockDetails("username", username);
+  if (blockedUsername) {
+    const confidence = Math.round(blockedUsername.confidence * 100);
+    const threshold = Math.round(blockedUsername.threshold * 100);
+    return {
+      error: `Your content was blocked by moderation (${confidence}% confidence, threshold ${threshold}%).`,
+      moderationBlock: blockedUsername,
+    };
   }
 
   const supabase = await createClient();

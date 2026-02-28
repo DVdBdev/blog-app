@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateProfile } from "./profile.actions";
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
-import { logModerationCandidate } from "@/features/moderation/moderation.server";
+import { enforceTextModerationOrBlock, logModerationCandidate } from "@/features/moderation/moderation.server";
 
 vi.mock("@/services/supabase/server", () => ({
   createClient: vi.fn(),
@@ -13,16 +13,19 @@ vi.mock("next/cache", () => ({
 }));
 
 vi.mock("@/features/moderation/moderation.server", () => ({
+  enforceTextModerationOrBlock: vi.fn(async () => null),
   logModerationCandidate: vi.fn(async () => {}),
 }));
 
 describe("updateProfile", () => {
   const createClientMock = vi.mocked(createClient);
   const revalidatePathMock = vi.mocked(revalidatePath);
+  const enforceTextModerationOrBlockMock = vi.mocked(enforceTextModerationOrBlock);
   const logModerationCandidateMock = vi.mocked(logModerationCandidate);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    enforceTextModerationOrBlockMock.mockResolvedValue(null);
   });
 
   it("rejects unauthenticated users", async () => {
@@ -63,6 +66,7 @@ describe("updateProfile", () => {
     } as never);
 
     await updateProfile({ bio: "potential spam content" });
+    expect(enforceTextModerationOrBlockMock).toHaveBeenCalled();
     expect(logModerationCandidateMock).toHaveBeenCalled();
   });
 });

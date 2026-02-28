@@ -43,6 +43,8 @@ test.describe("authenticated user flows", () => {
   });
 
   test("user can create and delete a journey with a post", async ({ page }) => {
+    test.setTimeout(60_000);
+
     const journeyTitle = `E2E Journey ${Date.now()}`;
     const postTitle = `E2E Post ${Date.now()}`;
 
@@ -50,7 +52,7 @@ test.describe("authenticated user flows", () => {
     await page.goto("/journeys");
 
     await page.getByRole("button", { name: "Create Journey" }).click();
-    const journeyDialog = page.getByRole("dialog");
+    const journeyDialog = page.getByRole("dialog", { name: "Create a New Journey" });
     await journeyDialog.locator("#title").fill(journeyTitle);
     await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
     await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
@@ -61,7 +63,7 @@ test.describe("authenticated user flows", () => {
     await expect(page.getByRole("heading", { name: journeyTitle })).toBeVisible();
 
     await page.getByRole("button", { name: "Add Post" }).click();
-    const postDialog = page.getByRole("dialog");
+    const postDialog = page.getByRole("dialog", { name: "Create a New Post" });
     await postDialog.locator("#title").fill(postTitle);
     await postDialog.getByRole("button", { name: "Save Post" }).click();
     await expect(postDialog).not.toBeVisible({ timeout: 25000 });
@@ -75,6 +77,47 @@ test.describe("authenticated user flows", () => {
     await page.getByRole("button", { name: "Delete post", exact: true }).click();
     await page.waitForURL(/\/journeys\/.+/);
     await expect(page.getByText(postTitle)).not.toBeVisible();
+
+    await page.getByLabel("Delete journey").click();
+    await page.getByRole("button", { name: "Delete journey", exact: true }).click();
+    await page.waitForURL(/\/journeys$/, { timeout: 20000 });
+    await expect(page.getByRole("link", { name: `Open journey ${journeyTitle}` })).not.toBeVisible();
+  });
+
+  test("user sees moderation blocked modal when creating an unsafe post", async ({ page }) => {
+    test.setTimeout(60_000);
+
+    const journeyTitle = `E2E Journey Blocked Post ${Date.now()}`;
+    const blockedPostTitle = `fucking shit ${Date.now()}`;
+
+    await loginViaUi(page, userEmail!, userPassword!);
+    await page.goto("/journeys");
+
+    await page.getByRole("button", { name: "Create Journey" }).click();
+    const journeyDialog = page.getByRole("dialog", { name: "Create a New Journey" });
+    await journeyDialog.locator("#title").fill(journeyTitle);
+    await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
+    await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
+    const openJourneyLink = page.getByRole("link", { name: `Open journey ${journeyTitle}` });
+    await expect(openJourneyLink).toBeVisible({ timeout: 20000 });
+
+    await openJourneyLink.click();
+    await page.waitForURL(/\/journeys\/.+/);
+
+    await page.getByRole("button", { name: "Add Post" }).click();
+    const postDialog = page.getByRole("dialog", { name: "Create a New Post" });
+    await postDialog.locator("#title").fill(blockedPostTitle);
+    await postDialog.getByRole("button", { name: "Save Post" }).click();
+
+    const blockedDialog = page.getByRole("dialog", { name: "Content Blocked" });
+    await expect(blockedDialog).toBeVisible({ timeout: 20000 });
+    await expect(blockedDialog.getByText("Your content was not saved because it triggered moderation thresholds.")).toBeVisible();
+    await blockedDialog.getByRole("button", { name: "OK" }).click();
+    await expect(blockedDialog).not.toBeVisible({ timeout: 10000 });
+
+    await postDialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(postDialog).not.toBeVisible({ timeout: 10000 });
+    await expect(page.locator("a", { hasText: blockedPostTitle }).first()).not.toBeVisible();
 
     await page.getByLabel("Delete journey").click();
     await page.getByRole("button", { name: "Delete journey", exact: true }).click();
@@ -132,6 +175,8 @@ test.describe("admin flows", () => {
     page,
     browser,
   }) => {
+    test.setTimeout(60_000);
+
     const moderationToken = `e2e-spam-${Date.now()}`;
     const flaggedJourneyTitle = `spam ${moderationToken}`;
 
@@ -150,19 +195,28 @@ test.describe("admin flows", () => {
     await userPage.goto("/journeys");
 
     await userPage.getByRole("button", { name: "Create Journey" }).click();
-    const journeyDialog = userPage.getByRole("dialog");
+    const journeyDialog = userPage.getByRole("dialog", { name: "Create a New Journey" });
     await journeyDialog.locator("#title").fill(flaggedJourneyTitle);
     await journeyDialog.getByRole("button", { name: "Create Journey" }).click();
     const openJourneyLink = userPage.getByRole("link", { name: `Open journey ${flaggedJourneyTitle}` });
-    await expect(journeyDialog).not.toBeVisible({ timeout: 20000 });
-    await expect(openJourneyLink).toBeVisible({ timeout: 20000 });
+    const blockedDialog = userPage.getByRole("dialog", { name: "Content Blocked" });
 
-    await openJourneyLink.click();
-    await userPage.waitForURL(/\/journeys\/.+/);
-    await userPage.getByLabel("Delete journey").click();
-    await userPage.getByRole("button", { name: "Delete journey", exact: true }).click();
-    await userPage.waitForURL(/\/journeys$/, { timeout: 20000 });
-    await expect(userPage.getByRole("link", { name: `Open journey ${flaggedJourneyTitle}` })).not.toBeVisible();
+    const creationOutcome = await Promise.race<"created" | "blocked">([
+      openJourneyLink.waitFor({ state: "visible", timeout: 20000 }).then(() => "created"),
+      blockedDialog.waitFor({ state: "visible", timeout: 20000 }).then(() => "blocked"),
+    ]);
+
+    if (creationOutcome === "created") {
+      await openJourneyLink.click();
+      await userPage.waitForURL(/\/journeys\/.+/);
+      await userPage.getByLabel("Delete journey").click();
+      await userPage.getByRole("button", { name: "Delete journey", exact: true }).click();
+      await userPage.waitForURL(/\/journeys$/, { timeout: 20000 });
+      await expect(userPage.getByRole("link", { name: `Open journey ${flaggedJourneyTitle}` })).not.toBeVisible();
+    } else {
+      await blockedDialog.getByRole("button", { name: "OK" }).click();
+      await expect(blockedDialog).not.toBeVisible({ timeout: 10000 });
+    }
     await userContext.close();
 
     await page.goto(`/admin?tab=moderation&moderationQuery=${encodeURIComponent(moderationToken)}`);

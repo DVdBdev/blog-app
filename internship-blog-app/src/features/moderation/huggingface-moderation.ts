@@ -5,6 +5,28 @@ interface HuggingFaceLabelScore {
   score?: number;
 }
 
+export interface HuggingFaceModerationLabel {
+  label: string;
+  normalizedLabel: string;
+  score: number;
+  unsafe: boolean;
+}
+
+export interface HuggingFaceModerationDetailedResult {
+  model: string;
+  labels: HuggingFaceModerationLabel[];
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === "AbortError") ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === 20)
+  );
+}
+
 function parseThreshold(): number {
   const parsed = Number(process.env.HUGGINGFACE_MODERATION_THRESHOLD ?? "0.7");
   if (Number.isNaN(parsed)) return 0.7;
@@ -45,11 +67,40 @@ function extractScores(payload: unknown): HuggingFaceLabelScore[] {
 export async function scanTextWithHuggingFaceModeration(
   text: string
 ): Promise<ModerationScanResult | null> {
+  const detailed = await scanTextWithHuggingFaceModerationDetailed(text);
+  if (!detailed) return null;
+
+  const threshold = parseThreshold();
+
+  const flaggedLabels = detailed.labels
+    .filter((entry) => entry.unsafe && entry.score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => `${entry.normalizedLabel} (${entry.score.toFixed(2)})`);
+
+  if (flaggedLabels.length === 0) return null;
+
+  return {
+    reason: `Hugging Face moderation flagged labels: ${flaggedLabels.join(", ")}`,
+    preview: createModerationPreview(text),
+  };
+}
+
+function moderationRequestTimeoutMs(): number {
+  const parsed = Number(process.env.HUGGINGFACE_MODERATION_TIMEOUT_MS ?? "5000");
+  if (Number.isNaN(parsed) || parsed <= 0) return 5000;
+  return parsed;
+}
+
+export async function scanTextWithHuggingFaceModerationDetailed(
+  text: string
+): Promise<HuggingFaceModerationDetailedResult | null> {
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   if (!apiKey) return null;
 
   const model = process.env.HUGGINGFACE_MODERATION_MODEL ?? "unitary/toxic-bert";
-  const threshold = parseThreshold();
+  const timeoutMs = moderationRequestTimeoutMs();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
@@ -59,7 +110,9 @@ export async function scanTextWithHuggingFaceModeration(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ inputs: text }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       console.error("Hugging Face moderation request failed:", response.status, response.statusText);
@@ -69,22 +122,26 @@ export async function scanTextWithHuggingFaceModeration(
     const json = (await response.json()) as unknown;
     const scores = extractScores(json);
 
-    const flaggedLabels = scores
-      .filter((entry) => {
-        const label = typeof entry.label === "string" ? entry.label : "";
+    const labels: HuggingFaceModerationLabel[] = scores
+      .map((entry) => {
+        const label = typeof entry.label === "string" ? entry.label : "unknown";
+        const normalizedLabel = normalizeLabel(label);
         const score = typeof entry.score === "number" ? entry.score : 0;
-        return isUnsafeLabel(label) && score >= threshold;
+        return {
+          label,
+          normalizedLabel,
+          score,
+          unsafe: isUnsafeLabel(label),
+        };
       })
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-      .map((entry) => `${normalizeLabel(entry.label ?? "unknown")} (${(entry.score ?? 0).toFixed(2)})`);
+      .sort((a, b) => b.score - a.score);
 
-    if (flaggedLabels.length === 0) return null;
-
-    return {
-      reason: `Hugging Face moderation flagged labels: ${flaggedLabels.join(", ")}`,
-      preview: createModerationPreview(text),
-    };
+    return { model, labels };
   } catch (error) {
+    clearTimeout(timeout);
+    if (isAbortError(error)) {
+      return null;
+    }
     console.error("Hugging Face moderation request error:", error);
     return null;
   }

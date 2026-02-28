@@ -27,7 +27,8 @@ describe("getModerationQueue", () => {
         profiles: { username: "alice" },
       },
     ];
-    const orderMock = vi.fn(async () => ({ data: resultRows, error: null }));
+    const rangeMock = vi.fn(async () => ({ data: resultRows, error: null }));
+    const orderMock = vi.fn(() => ({ range: rangeMock }));
     const selectMock = vi.fn(() => ({ order: orderMock }));
     const fromMock = vi.fn(() => ({ select: selectMock }));
     createClientMock.mockResolvedValue({ from: fromMock } as never);
@@ -35,8 +36,8 @@ describe("getModerationQueue", () => {
     const result = await getModerationQueue();
 
     expect(fromMock).toHaveBeenCalledWith("moderation_log");
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual(
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0]).toEqual(
       expect.objectContaining({
         id: "log-1",
         username: "alice",
@@ -46,7 +47,8 @@ describe("getModerationQueue", () => {
   });
 
   it("applies status filter when provided", async () => {
-    const eqMock = vi.fn(async () => ({ data: [], error: null }));
+    const rangeMock = vi.fn(async () => ({ data: [], error: null }));
+    const eqMock = vi.fn(() => ({ range: rangeMock }));
     const orderMock = vi.fn(() => ({ eq: eqMock }));
     const selectMock = vi.fn(() => ({ order: orderMock }));
     const fromMock = vi.fn(() => ({ select: selectMock }));
@@ -89,7 +91,7 @@ describe("getModerationQueue", () => {
 
     const result = await getModerationQueue({ query: "alice" });
 
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("log-1");
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].id).toBe("log-1");
   });
 });

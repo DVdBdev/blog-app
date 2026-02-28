@@ -22,6 +22,7 @@ import {
   getAdminPosts,
   getAdminUsers,
   getModerationQueue,
+  type ModerationQueuePage,
   type ModerationQueueItem,
 } from "@/features/admin/admin.server";
 import { AdminTestRunner } from "@/features/admin/components/AdminTestRunner";
@@ -60,6 +61,12 @@ function parseModerationStatusFilter(
   return "all";
 }
 
+function parsePositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value ?? `${fallback}`);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.floor(parsed);
+}
+
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",
@@ -70,6 +77,22 @@ function formatDate(value: string) {
 
 function formatContentType(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function formatModerationReason(reason: string | null) {
+  if (!reason) return null;
+
+  const normalized = reason.replace(/\s+/g, " ").trim();
+  const hasScore = /\((0(?:\.\d+)?|1(?:\.0+)?)\)/.test(normalized);
+  if (hasScore) {
+    return normalized.replace(/\((0(?:\.\d+)?|1(?:\.0+)?)\)/g, (_, raw: string) => {
+      const percent = Math.round(Number(raw) * 100);
+      return `(${raw} / ${percent}%)`;
+    });
+  }
+
+  // Local rule/fallback reasons do not carry model label scores.
+  return `${normalized} (local rule 1.00 / 100%)`;
 }
 
 function getModerationRelatedContentLink(
@@ -89,6 +112,47 @@ function getModerationRelatedContentLink(
     return `/journeys/${entry.related_entity_id}`;
   }
   return entry.username ? `/u/${entry.username}` : "/admin?tab=users";
+}
+
+function normalizeModerationText(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function resolveModerationRelatedEntityIds(
+  entries: ModerationQueueItem[],
+  posts: Awaited<ReturnType<typeof getAdminPosts>>,
+  journeys: Awaited<ReturnType<typeof getAdminJourneys>>
+): ModerationQueueItem[] {
+  return entries.map((entry) => {
+    if (entry.related_entity_id) return entry;
+
+    const preview = normalizeModerationText(entry.content_preview);
+    if (!preview) return entry;
+
+    if (entry.content_type === "post_title") {
+      const matches = posts.filter((post) => {
+        if (post.author_id !== entry.user_id) return false;
+        return normalizeModerationText(post.title) === preview;
+      });
+      if (matches.length === 1) {
+        return { ...entry, related_entity_id: matches[0].id };
+      }
+      return entry;
+    }
+
+    if (entry.content_type === "journey_title") {
+      const matches = journeys.filter((journey) => {
+        if (journey.owner_id !== entry.user_id) return false;
+        return normalizeModerationText(journey.title) === preview;
+      });
+      if (matches.length === 1) {
+        return { ...entry, related_entity_id: matches[0].id };
+      }
+      return entry;
+    }
+
+    return entry;
+  });
 }
 
 function TabLink({ tab, activeTab, label }: { tab: AdminTab; activeTab: AdminTab; label: string }) {
@@ -461,15 +525,24 @@ function PostsSection({
 }
 
 function ModerationSection({
-  entries,
+  queue,
   status,
   query,
 }: {
-  entries: ModerationQueueItem[];
+  queue: ModerationQueuePage;
   status: "all" | "pending" | "reviewed" | "dismissed" | "action_taken";
   query: string;
 }) {
+  const { entries, page, hasPreviousPage, hasNextPage } = queue;
   const bulkFormId = "moderation-bulk-action-form";
+  const createModerationPageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    params.set("tab", "moderation");
+    if (status !== "all") params.set("moderationStatus", status);
+    if (query) params.set("moderationQuery", query);
+    params.set("moderationPage", String(nextPage));
+    return `/admin?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -521,8 +594,42 @@ function ModerationSection({
         </form>
       ) : null}
 
+      {entries.length > 0 ? (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>Page {page}</span>
+          <div className="flex gap-2">
+            {hasPreviousPage ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={createModerationPageHref(Math.max(1, page - 1))}>Previous</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                Previous
+              </Button>
+            )}
+            {hasNextPage ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={createModerationPageHref(page + 1)}>Next</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                Next
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       {entries.map((entry) => {
         const isResolved = entry.status !== "pending";
+        const requiresRelatedEntityIdForDelete =
+          entry.content_type === "post_title" ||
+          entry.content_type === "post_content" ||
+          entry.content_type === "post_image" ||
+          entry.content_type === "journey_title" ||
+          entry.content_type === "journey_description";
+        const canDeleteFlaggedContent =
+          !requiresRelatedEntityIdForDelete || Boolean(entry.related_entity_id);
         return (
         <article key={entry.id} className="surface-card p-4 sm:p-5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -543,7 +650,9 @@ function ModerationSection({
               </p>
               <p className="text-sm">{entry.content_preview}</p>
               {entry.flag_reason ? (
-                <p className="text-xs text-muted-foreground">Reason: {entry.flag_reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  Reason: {formatModerationReason(entry.flag_reason)}
+                </p>
               ) : null}
               <Badge
                 variant={entry.status === "pending" ? "destructive" : "secondary"}
@@ -590,19 +699,21 @@ function ModerationSection({
                 }}
               />
 
-              <ModerationConfirmActionDialog
-                action={deleteFlaggedContentFromModerationFormAction}
-                title="Delete flagged content?"
-                description="This removes the specific content linked to this moderation item and marks this moderation entry as action_taken."
-                submitLabel="Delete flagged content"
-                disabled={isResolved}
-                hiddenFields={{
-                  logId: entry.id,
-                  targetUserId: entry.user_id,
-                  contentType: entry.content_type,
-                  relatedEntityId: entry.related_entity_id ?? "",
-                }}
-              />
+              {canDeleteFlaggedContent ? (
+                <ModerationConfirmActionDialog
+                  action={deleteFlaggedContentFromModerationFormAction}
+                  title="Delete flagged content?"
+                  description="This removes the specific content linked to this moderation item and marks this moderation entry as action_taken."
+                  submitLabel="Delete flagged content"
+                  disabled={isResolved}
+                  hiddenFields={{
+                    logId: entry.id,
+                    targetUserId: entry.user_id,
+                    contentType: entry.content_type,
+                    relatedEntityId: entry.related_entity_id ?? "",
+                  }}
+                />
+              ) : null}
 
               <ModerationConfirmActionDialog
                 action={deleteAllUserContentFromModerationFormAction}
@@ -644,6 +755,7 @@ interface AdminPageProps {
     postStatus?: string;
     moderationStatus?: string;
     moderationQuery?: string;
+    moderationPage?: string;
   }>;
 }
 
@@ -677,12 +789,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const postStatus = parsePostStatusFilter(params.postStatus);
   const moderationStatus = parseModerationStatusFilter(params.moderationStatus);
   const moderationQuery = params.moderationQuery?.trim() ?? "";
+  const moderationPage = parsePositiveInt(params.moderationPage, 1);
 
-  const [users, rawJourneys, rawPosts, moderationEntries] = await Promise.all([
+  const [users, rawJourneys, rawPosts, moderationQueue] = await Promise.all([
     getAdminUsers({ query: userQuery, role: userRole }),
     getAdminJourneys(),
     getAdminPosts({ status: postStatus }),
-    getModerationQueue({ status: moderationStatus, query: moderationQuery }),
+    getModerationQueue({ status: moderationStatus, query: moderationQuery, page: moderationPage, pageSize: 25 }),
   ]);
 
   const journeys = journeyQuery
@@ -704,6 +817,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         );
       })
     : rawPosts;
+  const moderationEntriesWithResolvedIds = resolveModerationRelatedEntityIds(
+    moderationQueue.entries,
+    rawPosts,
+    rawJourneys
+  );
+  const moderationQueueWithResolvedIds: ModerationQueuePage = {
+    ...moderationQueue,
+    entries: moderationEntriesWithResolvedIds,
+  };
 
   return (
     <main className="page-shell container mx-auto py-6 sm:py-8 px-4 max-w-6xl space-y-6">
@@ -728,7 +850,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {tab === "journeys" && <JourneysSection journeys={journeys} query={journeyQuery} />}
       {tab === "posts" && <PostsSection posts={posts} query={postQuery} status={postStatus} />}
       {tab === "moderation" && (
-        <ModerationSection entries={moderationEntries} status={moderationStatus} query={moderationQuery} />
+        <ModerationSection queue={moderationQueueWithResolvedIds} status={moderationStatus} query={moderationQuery} />
       )}
       {!isProduction && tab === "tests" && <AdminTestRunner />}
     </main>

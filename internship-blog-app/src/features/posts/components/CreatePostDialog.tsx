@@ -26,9 +26,17 @@ import {
 import { Loader2, Plus } from "lucide-react";
 import { RichTextEditor } from "./RichTextEditor";
 import { getDefaultPostStatus } from "@/lib/user-preferences";
+import { ModerationBlockedDialog } from "@/features/moderation/components/ModerationBlockedDialog";
 
 interface CreatePostDialogProps {
   journeyId: string;
+}
+
+interface ModerationBlockDetails {
+  reason: string;
+  confidence: number;
+  threshold: number;
+  labels: string[];
 }
 
 function normalizeContent(value: unknown): Record<string, unknown> | null {
@@ -62,6 +70,8 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
+  const [moderationBlock, setModerationBlock] = useState<ModerationBlockDetails | null>(null);
 
   const [formData, setFormData] = useState<CreatePostData>({
     journey_id: journeyId,
@@ -125,6 +135,10 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
       const result = await createPost(payload);
       if (result.error) {
         setError(result.error);
+        if ("moderationBlock" in result && result.moderationBlock) {
+          setModerationBlock(result.moderationBlock as ModerationBlockDetails);
+          setModerationDialogOpen(true);
+        }
       } else {
         const savedContent = normalizeContent(result.post?.content);
         if (savedContent) {
@@ -241,6 +255,11 @@ export function CreatePostDialog({ journeyId }: CreatePostDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      <ModerationBlockedDialog
+        open={moderationDialogOpen}
+        onOpenChange={setModerationDialogOpen}
+        details={moderationBlock}
+      />
     </Dialog>
   );
 }

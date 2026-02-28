@@ -4,12 +4,18 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { JourneyStatus, JourneyVisibility } from "@/types";
 import { requireActiveAccount } from "@/features/auth/account-status.server";
-import { logModerationCandidate } from "@/features/moderation/moderation.server";
+import { enforceTextModerationOrBlock, logModerationCandidate } from "@/features/moderation/moderation.server";
 
 export interface CreateJourneyData {
   title: string;
   description?: string;
   visibility: JourneyVisibility;
+}
+
+function runModerationLogsInBackground(tasks: Array<Promise<void>>) {
+  void Promise.allSettled(tasks).catch((error) => {
+    console.error("Background moderation logging failed:", error);
+  });
 }
 
 export async function createJourney(data: CreateJourneyData) {
@@ -32,13 +38,31 @@ export async function createJourney(data: CreateJourneyData) {
     return { error: "Title is required" };
   }
 
+  const description = data.description?.trim() ?? "";
+  const [blockedTitle, blockedDescription] = await Promise.all([
+    enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "journey_title",
+      text: data.title,
+    }),
+    description
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "journey_description",
+          text: description,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedDescription) return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
+
   const { data: insertedJourney, error } = await supabase
     .from("journeys")
     .insert([
       {
         owner_id: user.id,
         title: data.title.trim(),
-        description: data.description?.trim() || null,
+        description: description || null,
         visibility: data.visibility,
         status: "active",
         completed_at: null,
@@ -53,20 +77,25 @@ export async function createJourney(data: CreateJourneyData) {
   }
 
   const journeyId = insertedJourney?.id as string;
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "journey_title",
-    relatedEntityId: journeyId,
-    text: data.title,
-  });
-  if (data.description?.trim()) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "journey_description",
+      contentType: "journey_title",
       relatedEntityId: journeyId,
-      text: data.description,
-    });
+      text: data.title,
+    }),
+  ];
+  if (description) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "journey_description",
+        relatedEntityId: journeyId,
+        text: description,
+      })
+    );
   }
+  runModerationLogsInBackground(moderationLogTasks);
 
   revalidatePath("/journeys");
   return { success: true };
@@ -101,6 +130,26 @@ export async function updateJourney(data: UpdateJourneyData) {
     return { error: "Title is required" };
   }
 
+  const description = data.description?.trim() ?? "";
+  const [blockedTitle, blockedDescription] = await Promise.all([
+    enforceTextModerationOrBlock({
+      userId: user.id,
+      contentType: "journey_title",
+      relatedEntityId: data.id,
+      text: data.title,
+    }),
+    description
+      ? enforceTextModerationOrBlock({
+          userId: user.id,
+          contentType: "journey_description",
+          relatedEntityId: data.id,
+          text: description,
+        })
+      : Promise.resolve(null),
+  ]);
+  if (blockedTitle) return { error: blockedTitle.message, moderationBlock: blockedTitle.details };
+  if (blockedDescription) return { error: blockedDescription.message, moderationBlock: blockedDescription.details };
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -113,7 +162,7 @@ export async function updateJourney(data: UpdateJourneyData) {
     .from("journeys")
     .update({
       title: data.title.trim(),
-      description: data.description?.trim() || null,
+      description: description || null,
       visibility: data.visibility,
       status: data.status,
       completed_at: data.status === "completed" ? (data.completed_at ?? new Date().toISOString()) : null,
@@ -131,20 +180,25 @@ export async function updateJourney(data: UpdateJourneyData) {
     return { error: "Failed to update journey" };
   }
 
-  await logModerationCandidate({
-    userId: user.id,
-    contentType: "journey_title",
-    relatedEntityId: data.id,
-    text: data.title,
-  });
-  if (data.description?.trim()) {
-    await logModerationCandidate({
+  const moderationLogTasks: Array<Promise<void>> = [
+    logModerationCandidate({
       userId: user.id,
-      contentType: "journey_description",
+      contentType: "journey_title",
       relatedEntityId: data.id,
-      text: data.description,
-    });
+      text: data.title,
+    }),
+  ];
+  if (description) {
+    moderationLogTasks.push(
+      logModerationCandidate({
+        userId: user.id,
+        contentType: "journey_description",
+        relatedEntityId: data.id,
+        text: description,
+      })
+    );
   }
+  runModerationLogsInBackground(moderationLogTasks);
 
   revalidatePath(`/journeys/${data.id}`);
   revalidatePath("/journeys");
