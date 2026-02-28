@@ -404,6 +404,41 @@ export async function setModerationStatusAction(formData: FormData) {
   return { success: true };
 }
 
+export async function setModerationStatusBulkAction(formData: FormData) {
+  const nextStatus = String(formData.get("nextStatus") ?? "") as "reviewed" | "dismissed";
+  const logIds = formData
+    .getAll("logIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if ((nextStatus !== "reviewed" && nextStatus !== "dismissed") || logIds.length === 0) {
+    return { error: "Invalid bulk moderation request" };
+  }
+
+  const uniqueLogIds = [...new Set(logIds)];
+
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  const { error: updateError } = await supabase
+    .from("moderation_log")
+    .update({
+      status: nextStatus,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+    })
+    .in("id", uniqueLogIds)
+    .eq("status", "pending");
+
+  if (updateError) {
+    console.error("Error bulk updating moderation status:", updateError);
+    return { error: "Failed to update moderation status" };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 async function setModerationActionTaken(
   supabase: Awaited<ReturnType<typeof createClient>>,
   logId: string,

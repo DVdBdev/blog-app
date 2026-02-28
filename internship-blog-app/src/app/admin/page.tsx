@@ -11,6 +11,7 @@ import {
   deletePostAdminAction,
   deleteUserAction,
   setModerationStatusAction,
+  setModerationStatusBulkAction,
   setUserRoleAction,
   setUserStatusAction,
   updateJourneyAdminAction,
@@ -136,6 +137,11 @@ async function deletePostFormAction(formData: FormData) {
 async function setModerationStatusFormAction(formData: FormData) {
   "use server";
   await setModerationStatusAction(formData);
+}
+
+async function setModerationStatusBulkFormAction(formData: FormData) {
+  "use server";
+  await setModerationStatusBulkAction(formData);
 }
 
 async function banUserFromModerationFormAction(formData: FormData) {
@@ -463,6 +469,8 @@ function ModerationSection({
   status: "all" | "pending" | "reviewed" | "dismissed" | "action_taken";
   query: string;
 }) {
+  const bulkFormId = "moderation-bulk-action-form";
+
   return (
     <div className="space-y-4">
       <form action="/admin" method="get" className="surface-card p-4 sm:p-5">
@@ -497,12 +505,38 @@ function ModerationSection({
         <div className="surface-card p-6 text-center text-muted-foreground">No moderation flags found.</div>
       ) : null}
 
+      {entries.length > 0 ? (
+        <form id={bulkFormId} action={setModerationStatusBulkFormAction} className="surface-card p-4 sm:p-5 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Bulk actions apply only to selected pending entries.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" name="nextStatus" value="reviewed" variant="outline">
+              Mark selected reviewed
+            </Button>
+            <Button type="submit" size="sm" name="nextStatus" value="dismissed" variant="outline">
+              Dismiss selected
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
       {entries.map((entry) => {
         const isResolved = entry.status !== "pending";
         return (
         <article key={entry.id} className="surface-card p-4 sm:p-5 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="logIds"
+                value={entry.id}
+                form={bulkFormId}
+                disabled={isResolved}
+                aria-label={`Select moderation entry ${entry.id}`}
+                className="mt-1 h-4 w-4 rounded border-input bg-background"
+              />
+              <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 User: @{entry.username ?? "unknown"} | Type: <span className="capitalize">{formatContentType(entry.content_type)}</span> | Created{" "}
                 {formatDate(entry.created_at)}
@@ -520,6 +554,7 @@ function ModerationSection({
               <p className="text-xs text-muted-foreground">
                 Destructive actions require modal confirmation.
               </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
