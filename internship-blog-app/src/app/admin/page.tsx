@@ -211,7 +211,10 @@ function UsersSection({
                 Role: <span className="capitalize">{user.role}</span> | Joined {formatDate(user.created_at)}
               </p>
               <div className="mt-2">
-                <Badge variant={user.status === "banned" ? "destructive" : "secondary"}>
+                <Badge
+                  variant={user.status === "banned" ? "destructive" : "secondary"}
+                  className={user.status === "banned" ? "text-white" : undefined}
+                >
                   {user.status === "banned" ? "Banned" : "Active"}
                 </Badge>
               </div>
@@ -510,7 +513,7 @@ function ModerationSection({
               ) : null}
               <Badge
                 variant={entry.status === "pending" ? "destructive" : "secondary"}
-                className="capitalize"
+                className={entry.status === "pending" ? "capitalize text-white" : "capitalize"}
               >
                 {entry.status}
               </Badge>
