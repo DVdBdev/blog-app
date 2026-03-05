@@ -3,8 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  banUsersFromModerationBulkAction,
   banUserFromModerationAction,
+  deleteAllUsersContentFromModerationBulkAction,
   deleteModerationLogAction,
+  deleteModerationLogsBulkAction,
   deleteAllUserContentFromModerationAction,
   deleteFlaggedContentFromModerationAction,
   deleteJourneyAdminAction,
@@ -26,6 +29,7 @@ import {
   type ModerationQueueItem,
 } from "@/features/admin/admin.server";
 import { AdminTestRunner } from "@/features/admin/components/AdminTestRunner";
+import { ModerationBulkConfirmActionDialog } from "@/features/admin/components/ModerationBulkConfirmActionDialog";
 import { ModerationConfirmActionDialog } from "@/features/admin/components/ModerationConfirmActionDialog";
 import { getCurrentProfile } from "@/features/profiles/profile.server";
 import { getCurrentUser } from "@/features/auth/auth.server";
@@ -206,6 +210,21 @@ async function setModerationStatusFormAction(formData: FormData) {
 async function setModerationStatusBulkFormAction(formData: FormData) {
   "use server";
   await setModerationStatusBulkAction(formData);
+}
+
+async function banUsersFromModerationBulkFormAction(formData: FormData) {
+  "use server";
+  return await banUsersFromModerationBulkAction(formData);
+}
+
+async function deleteAllUsersContentFromModerationBulkFormAction(formData: FormData) {
+  "use server";
+  return await deleteAllUsersContentFromModerationBulkAction(formData);
+}
+
+async function deleteModerationLogsBulkFormAction(formData: FormData) {
+  "use server";
+  return await deleteModerationLogsBulkAction(formData);
 }
 
 async function banUserFromModerationFormAction(formData: FormData) {
@@ -590,6 +609,27 @@ function ModerationSection({
             <Button type="submit" size="sm" name="nextStatus" value="dismissed" variant="outline">
               Dismiss selected
             </Button>
+            <ModerationBulkConfirmActionDialog
+              action={banUsersFromModerationBulkFormAction}
+              title="Ban users for selected entries?"
+              description="This bans the user accounts linked to selected pending moderation entries and marks those entries as action_taken."
+              submitLabel="Ban selected users"
+              sourceFormId={bulkFormId}
+            />
+            <ModerationBulkConfirmActionDialog
+              action={deleteAllUsersContentFromModerationBulkFormAction}
+              title="Delete all content for selected users?"
+              description="This permanently deletes all journeys and posts for users linked to selected pending moderation entries, then marks those entries as action_taken."
+              submitLabel="Delete selected users content"
+              sourceFormId={bulkFormId}
+            />
+            <ModerationBulkConfirmActionDialog
+              action={deleteModerationLogsBulkFormAction}
+              title="Delete selected moderation logs?"
+              description="This permanently removes selected moderation log rows."
+              submitLabel="Delete selected logs"
+              sourceFormId={bulkFormId}
+            />
           </div>
         </form>
       ) : null}
@@ -631,18 +671,30 @@ function ModerationSection({
         const canDeleteFlaggedContent =
           !requiresRelatedEntityIdForDelete || Boolean(entry.related_entity_id);
         return (
-        <article key={entry.id} className="surface-card p-4 sm:p-5 space-y-3">
+        <article
+          key={entry.id}
+          className="surface-card p-4 sm:p-5 space-y-3 transition has-[input[type='checkbox']:checked]:ring-2 has-[input[type='checkbox']:checked]:ring-destructive/60 has-[input[type='checkbox']:checked]:bg-destructive/5"
+        >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                name="logIds"
-                value={entry.id}
-                form={bulkFormId}
-                disabled={isResolved}
-                aria-label={`Select moderation entry ${entry.id}`}
-                className="mt-1 h-4 w-4 rounded border-input bg-background"
-              />
+              <label
+                className={`mt-0.5 inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium ${
+                  isResolved
+                    ? "border-border bg-muted/40 text-muted-foreground"
+                    : "border-destructive/30 bg-destructive/10 text-destructive"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  name="logIds"
+                  value={entry.id}
+                  form={bulkFormId}
+                  disabled={isResolved}
+                  aria-label={`Select moderation entry ${entry.id}`}
+                  className="h-5 w-5 rounded border-input bg-background accent-destructive"
+                />
+                <span>{isResolved ? "Resolved" : "Select"}</span>
+              </label>
               <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 User: @{entry.username ?? "unknown"} | Type: <span className="capitalize">{formatContentType(entry.content_type)}</span> | Created{" "}

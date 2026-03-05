@@ -636,3 +636,171 @@ export async function deleteModerationLogAction(formData: FormData) {
   revalidatePath("/admin");
   return { success: true };
 }
+
+export async function banUsersFromModerationBulkAction(formData: FormData) {
+  const logIds = formData
+    .getAll("logIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (logIds.length === 0) return { error: "No moderation entries selected" };
+  if (!isConfirmed(formData)) return { error: "Confirmation required before enforcement action" };
+
+  const uniqueLogIds = [...new Set(logIds)];
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  const { data: logs, error: logsError } = await supabase
+    .from("moderation_log")
+    .select("id,user_id,status")
+    .in("id", uniqueLogIds)
+    .eq("status", "pending");
+
+  if (logsError) {
+    console.error("Error loading moderation logs for bulk ban:", logsError);
+    return { error: "Failed to validate moderation entries" };
+  }
+  if (!logs || logs.length === 0) return { error: "No pending moderation entries selected" };
+
+  const targetUserIds = [...new Set(logs.map((log) => log.user_id).filter(Boolean))];
+  if (targetUserIds.length === 0) return { error: "No valid users found for selected entries" };
+  if (targetUserIds.includes(user.id)) return { error: "You cannot ban your own account" };
+
+  const { data: targetProfiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,role")
+    .in("id", targetUserIds);
+
+  if (profilesError) {
+    console.error("Error loading target profiles for bulk ban:", profilesError);
+    return { error: "Failed to validate users for ban action" };
+  }
+
+  if ((targetProfiles ?? []).some((profile) => profile.role === "admin")) {
+    return { error: "Selection includes admin accounts. Remove them before bulk ban." };
+  }
+
+  const { error: banError } = await supabase
+    .from("profiles")
+    .update({ status: "banned" })
+    .in("id", targetUserIds);
+
+  if (banError) {
+    console.error("Error bulk banning users from moderation action:", banError);
+    return { error: "Failed to ban selected users" };
+  }
+
+  const { error: updateLogsError } = await supabase
+    .from("moderation_log")
+    .update({
+      status: "action_taken",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+    })
+    .in("id", logs.map((log) => log.id));
+
+  if (updateLogsError) {
+    console.error("Error setting moderation action_taken after bulk ban:", updateLogsError);
+    return { error: "Failed to update moderation status" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/users");
+  revalidatePath("/search");
+  revalidatePath("/journeys");
+  return { success: true };
+}
+
+export async function deleteAllUsersContentFromModerationBulkAction(formData: FormData) {
+  const logIds = formData
+    .getAll("logIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (logIds.length === 0) return { error: "No moderation entries selected" };
+  if (!isConfirmed(formData)) return { error: "Confirmation required before enforcement action" };
+
+  const uniqueLogIds = [...new Set(logIds)];
+  const { supabase, user, error } = await requireAdminUser();
+  if (error || !user) return { error: error ?? "Not authorized" };
+
+  const { data: logs, error: logsError } = await supabase
+    .from("moderation_log")
+    .select("id,user_id,status")
+    .in("id", uniqueLogIds)
+    .eq("status", "pending");
+
+  if (logsError) {
+    console.error("Error loading moderation logs for bulk content delete:", logsError);
+    return { error: "Failed to validate moderation entries" };
+  }
+  if (!logs || logs.length === 0) return { error: "No pending moderation entries selected" };
+
+  const targetUserIds = [...new Set(logs.map((log) => log.user_id).filter(Boolean))];
+  if (targetUserIds.length === 0) return { error: "No valid users found for selected entries" };
+
+  const { error: deletePostsError } = await supabase
+    .from("posts")
+    .delete()
+    .in("author_id", targetUserIds);
+  if (deletePostsError) {
+    console.error("Error bulk deleting user posts from moderation action:", deletePostsError);
+    return { error: "Failed to delete user content" };
+  }
+
+  const { error: deleteJourneysError } = await supabase
+    .from("journeys")
+    .delete()
+    .in("owner_id", targetUserIds);
+  if (deleteJourneysError) {
+    console.error("Error bulk deleting user journeys from moderation action:", deleteJourneysError);
+    return { error: "Failed to delete user content" };
+  }
+
+  const { error: updateLogsError } = await supabase
+    .from("moderation_log")
+    .update({
+      status: "action_taken",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+    })
+    .in("id", logs.map((log) => log.id));
+
+  if (updateLogsError) {
+    console.error("Error setting moderation action_taken after bulk delete content:", updateLogsError);
+    return { error: "Failed to update moderation status" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/search");
+  revalidatePath("/journeys");
+  revalidatePath("/users");
+  return { success: true };
+}
+
+export async function deleteModerationLogsBulkAction(formData: FormData) {
+  const logIds = formData
+    .getAll("logIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (logIds.length === 0) return { error: "No moderation entries selected" };
+  if (!isConfirmed(formData)) return { error: "Confirmation required before enforcement action" };
+
+  const uniqueLogIds = [...new Set(logIds)];
+  const { supabase, error } = await requireAdminUser();
+  if (error) return { error };
+
+  const { error: deleteError } = await supabase
+    .from("moderation_log")
+    .delete()
+    .in("id", uniqueLogIds);
+
+  if (deleteError) {
+    console.error("Error bulk deleting moderation logs:", deleteError);
+    return { error: "Failed to delete moderation logs" };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
