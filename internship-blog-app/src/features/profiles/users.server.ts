@@ -1,4 +1,5 @@
 import { createClient } from "@/services/supabase/server";
+import { containsIlikeFilter } from "@/lib/postgrest-filters";
 
 export type UserDirectorySort = "relevance" | "newest" | "oldest";
 
@@ -23,10 +24,6 @@ interface SearchPublicProfilesOptions {
 
 function normalizeTerm(value: string) {
   return value.trim().toLowerCase();
-}
-
-function escapeLike(value: string) {
-  return value.replace(/[%_]/g, (match) => `\\${match}`);
 }
 
 function scoreText(text: string | null | undefined, term: string) {
@@ -74,15 +71,14 @@ export async function searchPublicProfiles({
     .limit(limit);
 
   if (hasTerm) {
-    const likePattern = `%${escapeLike(normalizedQuery)}%`;
     profileQuery = profileQuery.or(
       [
-        `username.ilike.${likePattern}`,
-        `display_name.ilike.${likePattern}`,
-        `bio.ilike.${likePattern}`,
-        `company.ilike.${likePattern}`,
-        `field_domain.ilike.${likePattern}`,
-        `location.ilike.${likePattern}`,
+        containsIlikeFilter("username", normalizedQuery),
+        containsIlikeFilter("display_name", normalizedQuery),
+        containsIlikeFilter("bio", normalizedQuery),
+        containsIlikeFilter("company", normalizedQuery),
+        containsIlikeFilter("field_domain", normalizedQuery),
+        containsIlikeFilter("location", normalizedQuery),
       ].join(","),
     );
   }

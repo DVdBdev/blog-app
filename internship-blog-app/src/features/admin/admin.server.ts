@@ -1,5 +1,6 @@
 import { createClient } from "@/services/supabase/server";
 import { ModerationContentType, ModerationStatus } from "@/types";
+import { containsIlikeFilter } from "@/lib/postgrest-filters";
 
 export interface AdminUserRow {
   id: string;
@@ -110,7 +111,12 @@ export async function getAdminUsers(filter: AdminUsersFilter = {}): Promise<Admi
     .order("created_at", { ascending: false });
 
   if (queryText) {
-    query = query.or(`username.ilike.%${queryText}%,email.ilike.%${queryText}%`);
+    query = query.or(
+      [
+        containsIlikeFilter("username", queryText),
+        containsIlikeFilter("email", queryText),
+      ].join(","),
+    );
   }
 
   if (roleFilter === "user" || roleFilter === "admin") {

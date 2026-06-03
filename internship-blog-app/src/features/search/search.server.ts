@@ -1,5 +1,6 @@
 import { createClient } from "@/services/supabase/server";
 import { Journey, Profile } from "@/types";
+import { containsIlikeFilter } from "@/lib/postgrest-filters";
 
 export type SearchType = "all" | "posts" | "journeys";
 export type SearchSort = "relevance" | "newest" | "oldest";
@@ -59,10 +60,6 @@ function normalizeTerm(value: string) {
   return value.trim().toLowerCase();
 }
 
-function escapeLike(value: string) {
-  return value.replace(/[%_]/g, (m) => `\\${m}`);
-}
-
 function scoreText(text: string | null | undefined, term: string) {
   if (!text || !term) return 0;
   const normalized = text.toLowerCase();
@@ -103,7 +100,6 @@ export async function searchPublicContent({
   const supabase = await createClient();
   const normalizedQuery = normalizeTerm(query);
   const hasTerm = normalizedQuery.length > 0;
-  const likePattern = `%${escapeLike(normalizedQuery)}%`;
   void type;
   const effectiveType: SearchType = "journeys";
 
@@ -112,7 +108,12 @@ export async function searchPublicContent({
     const { data: matchedProfiles } = await supabase
       .from("profiles")
       .select("id")
-      .or(`username.ilike.${likePattern},display_name.ilike.${likePattern}`)
+      .or(
+        [
+          containsIlikeFilter("username", normalizedQuery),
+          containsIlikeFilter("display_name", normalizedQuery),
+        ].join(","),
+      )
       .limit(40);
 
     matchingProfileIds = (matchedProfiles ?? []).map((p) => p.id as string);
@@ -130,7 +131,10 @@ export async function searchPublicContent({
       .limit(limitPerType);
 
     if (hasTerm) {
-      const clauses = [`title.ilike.${likePattern}`, `description.ilike.${likePattern}`];
+      const clauses = [
+        containsIlikeFilter("title", normalizedQuery),
+        containsIlikeFilter("description", normalizedQuery),
+      ];
       if (matchingProfileIds.length > 0) {
         clauses.push(`owner_id.in.(${matchingProfileIds.join(",")})`);
       }
